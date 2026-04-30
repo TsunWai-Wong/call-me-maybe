@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Set
 import json
 from llm_sdk import Small_LLM_Model
 
@@ -27,7 +27,7 @@ class Vocabulary:
 
     # get from regular expression
     
-    def search_for_vocab(self, targets: List[str]) -> Dict[str, int] | None:
+    def search_for_vocab(self, targets: List[str]) -> Set[int] | None:
         valid_tokens = set()
         for vocab, token_id in self.vocabs.items():
             if vocab in targets:

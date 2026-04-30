@@ -1,0 +1,93 @@
+from abc import ABC, abstractmethod
+from typing import Dict, List, Optional, Set
+from vocabulary import Vocabulary
+
+
+class State(ABC):
+    def __init__(self, model, next_state: "State"):
+        self.model = model
+        self.vocabs = Vocabulary(model)
+        self.next_state = next_state
+
+    @abstractmethod    
+    def get_valid_tokens(self, generated_text: str | List[int]) -> Set[int]:
+        pass
+
+    @abstractmethod
+    def update_state(self, generated_text: str) -> Optional["State"]:
+        pass
+
+class TerminationState(State):
+    def get_valid_tokens(self, generated_text: str | List[int]) -> Set[int]:
+        return {}
+
+    def update_state(self, generated_text: str) -> Optional["State"]:
+        return None
+
+
+class StringGenerationState(State):
+    def __init__(self, model, next_state: State, delimiter: str):
+        super().__init__(model, next_state)
+        self.delimiter = delimiter
+
+    def get_valid_tokens(self) -> Set[int]:
+        pass
+
+    # or called update_state
+    def transit_next_state(self):
+        """
+        Check whether the current state has ended
+        transit when delimiter (e.g. \") is reached? or when one function name is matched
+        """
+        pass
+
+
+class NumberGenerationState(State):
+    def get_valid_tokens(self) -> Set[int]:
+        """
+        by string matching in the Vocabulary class
+        """
+        pass
+
+    def transit_next_state(self):
+        """
+        Check whether the current state has ended
+        transit when delimiter (e.g. ,}]) is reached? or when one function name is matched
+        """
+        pass
+
+
+class LiteralState(State):
+    def __init__(self, model, next_state, text):
+        super().__init__(model, next_state)
+        self.text = text
+    def get_valid_tokens(self) -> Set[int]:
+        return {}
+    def update_state(self):
+        return self.next_state
+    
+
+class SelectionState(State):
+    """
+    receive a list of string as accepted options
+    keep record of what have been generated
+    return valid tokens
+    """
+    def __init__(self, model, next_state, allowed_sequences: List[int], delimiters: List[str]):
+        super().__init__(model, next_state)
+        self.allowed_sequences = allowed_sequences
+        self.delimiters = self.vocabs.search_for_vocab(delimiters)
+
+    def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
+        valid_tokens = set()
+        valid_tokens = self.vocabs.get_valid_tokens_match_token(self.allowed_sequences, generated_text)
+        valid_tokens.update(self.delimiters)
+        return valid_tokens
+
+    def update_state(self, next_token: int):
+        """
+        Check whether the current state has ended
+        transit when delimiter (e.g. whitespace) is reached? or when one function name is matched 
+        """
+        if next_token in self.delimiters:
+            return self.next_state
