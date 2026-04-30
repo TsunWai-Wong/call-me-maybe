@@ -26,6 +26,7 @@ class OutputGenerator:
 
         """
         sys_prompt = f"""
+<|im_start|>system
 You are an assistant to choose the correct function name to perform a task.
 
 Rules [Very Important!]:
@@ -35,10 +36,11 @@ Rules [Very Important!]:
 - Do not think
 
 Available functions and their descriptions:
-{'\n'.join(f"Function: {f.name} ({f.description})" for f in self.functions)}
+{'\n'.join(f"Function: {f.name} ({f.description})" for f in self.functions)}<|im_end|>
 
-Task:
-{prompt}
+<|im_start|>user
+Task: {prompt} <|im_end|>
+<|im_start|>assistant
 """
         allowed_functions = [self.model.encode(f.name).tolist()[0] for f in self.functions]
         # print(f"allowed function tokens: {allowed_functions}")
