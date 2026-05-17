@@ -1,5 +1,6 @@
 from typing import List, Dict, Set
 import json
+import regex
 from llm_sdk import Small_LLM_Model
 
 
@@ -7,6 +8,14 @@ class Vocabulary:
     def __init__(self, model):
         self.vocab_path = model.get_path_to_vocab_file()
         self.vocabs = self._get_all_vocabs(self.vocab_path)
+        self.math_vocabs = {
+            k: v
+            for k, v in self.vocabs.items()
+            if k in [char for char in "0123456789+-.Ee"]
+        }
+        regex.compile(
+            r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?"
+        )
 
 
     def _get_all_vocabs(self, vocab_path) -> List[str]:
@@ -26,11 +35,21 @@ class Vocabulary:
                             "due to permission error")
 
     # get from regular expression
-    
+
     def search_for_vocab(self, targets: List[str]) -> Set[int] | None:
         valid_tokens = set()
         for vocab, token_id in self.vocabs.items():
             if vocab in targets:
+                valid_tokens.add(token_id)
+        return valid_tokens
+
+    def get_valid_tokens_match_re(self, reg_exp, generated_tokens: List[int]) -> Set[int]:
+        valid_tokens = set()
+
+        for _, token_id in self.vocabs.items():
+            prefix = generated_tokens + [token_id]
+            prefix_str = model.decode(prefix)
+            if reg_exp.fullmatch(prefix_str):
                 valid_tokens.add(token_id)
         return valid_tokens
 

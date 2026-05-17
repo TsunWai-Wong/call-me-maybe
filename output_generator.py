@@ -31,9 +31,8 @@ You are an assistant to choose the correct function name to perform a task.
 
 Rules [Very Important!]:
 - Must choose the functions provided below. Do not invent a new function name.
-- Only output one function name. Do not include any other texts (e.g. explanations)
-- After writing the function name, you must stop by writing a foostoop delimiter (.)
-- Do not think
+- Only output one function name. Do not include any other texts (e.g. explanations, reasoning)
+- After writing the function name, you must stop by writing a delimiter (])
 
 Available functions and their descriptions:
 {'\n'.join(f"Function: {f.name} ({f.description})" for f in self.functions)}<|im_end|>

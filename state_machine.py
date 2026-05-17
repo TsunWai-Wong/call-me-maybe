@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Set
+from typing import List, Optional, Set
 from vocabulary import Vocabulary
 
 
@@ -9,13 +9,14 @@ class State(ABC):
         self.vocabs = Vocabulary(model)
         self.next_state = next_state
 
-    @abstractmethod    
+    @abstractmethod
     def get_valid_tokens(self, generated_text: str | List[int]) -> Set[int]:
         pass
 
     @abstractmethod
     def update_state(self, generated_text: str) -> Optional["State"]:
         pass
+
 
 class TerminationState(State):
     def get_valid_tokens(self, generated_text: str | List[int]) -> Set[int]:
@@ -43,6 +44,9 @@ class StringGenerationState(State):
 
 
 class NumberGenerationState(State):
+    def __init__(self, model, next_state, delimiters: List[str]):
+        pass
+
     def get_valid_tokens(self) -> Set[int]:
         """
         by string matching in the Vocabulary class
@@ -59,13 +63,18 @@ class NumberGenerationState(State):
 
 class LiteralState(State):
     def __init__(self, model, next_state, text):
+        """"""
         super().__init__(model, next_state)
         self.text = text
+
     def get_valid_tokens(self) -> Set[int]:
+        """"""
         return {}
+
     def update_state(self):
+        """"""
         return self.next_state
-    
+
 
 class SelectionState(State):
     """

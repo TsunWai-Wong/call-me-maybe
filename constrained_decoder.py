@@ -3,6 +3,7 @@ import numpy as np
 from state_machine import State, LiteralState, SelectionState, StringGenerationState, NumberGenerationState, TerminationState
 from llm_sdk import Small_LLM_Model
 
+
 class ConstrainedDecoder:
     def __init__(self, model) -> None:
         self.model = model
@@ -30,10 +31,10 @@ class ConstrainedDecoder:
 
         temperature = 0.000001
         logits_filtered = logits_filtered / temperature
-        
+
         # turn the list of logits to a list of probability
         probs = self.softmax(logits_filtered)
-        
+
         # Sample an index, then map back to the real token ID
         sampled_index = np.random.choice(len(probs), p=probs)
         return valid_token_ids[sampled_index]
@@ -49,7 +50,7 @@ class ConstrainedDecoder:
         - keep getting the next token according to the updated state
         """
         # get_valid_tokems
-        
+
         generated_tokens = []
         sys_prompt_tokens = self.model.encode(prompt).tolist()[0]
 
@@ -67,6 +68,5 @@ class ConstrainedDecoder:
                     state = next_state
                 else:
                     generated_tokens.append(next_token)
-        
+
         # return the tokens anyway
-            

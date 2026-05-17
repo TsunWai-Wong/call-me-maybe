@@ -12,6 +12,7 @@ class Function(BaseModel):
 
     # validator can be added here
 
+
 class InputLoader:
     """
     """
