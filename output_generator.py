@@ -73,7 +73,7 @@ User prompt: What is the sum of 265 and 345?<|im_end|>
         print(f"Result: {result}")
         return result
     
-    def _generate_parameters(self, prompt: str):
+    def _generate_parameters_string(self, prompt: str):
         """
         get list of required parameters
 
@@ -105,9 +105,51 @@ Extract the parameters in the JSON object for this prompt: Reverse the string 'h
 <|im_start|>assistant
 "parameters": {"s": 
 """
-        next_state = TerminationState(self.model, None)
-        state = StringGenerationState(self.model, next_state, ["\"", ",", "."])
+        end_state = TerminationState(self.model, None)
+        next_state = LiteralState(self.model, end_state, "abcde")
+        state = StringGenerationState(self.model, next_state, ["!"])
         result = self.decoder.generate(state, sys_prompt, 20)
+        print(f"Result: {result}")
+        return result
+
+    def _generate_parameters(self, prompt: str):
+        """
+        get list of required parameters
+
+        """
+        sys_prompt = """
+        <|im_start|>system
+You are an assistant to extract parameters for a function call according to an user's prompt.
+
+For example:
+- Prompt: "Greet shrek"
+- Output: "parameters": {"s": "shrek"}
+
+Rule:
+- Output directly. Do not include the thinking process.
+
+Function selected:
+{
+    "name": "fn_reverse_string",
+    "description": "Reverse a string and return the reversed result.",
+    "parameters": {
+      "s": {
+        "type": "string"
+      }
+    }
+    }
+  }<|im_end|>
+<|im_start|>user
+Extract the parameters in the JSON object for this prompt: Reverse the string 'hello my friend'<|im_end|>
+<|im_start|>assistant
+"parameters": 
+"""
+        end_state = TerminationState(self.model, None)
+        state_1 = LiteralState(self.model, end_state, "}")
+        state_2 = StringGenerationState(self.model, state_1, ["!"])
+        state_3 = LiteralState(self.model, state_2, "\"s\": ")
+        start_state = LiteralState(self.model, state_3, "{")
+        result = self.decoder.generate(start_state, sys_prompt, 20)
         print(f"Result: {result}")
         return result
 

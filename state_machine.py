@@ -14,7 +14,7 @@ class State(ABC):
         pass
 
     @abstractmethod
-    def update_state(self, generated_text: str) -> Optional["State"]:
+    def update_state(self, generated_tokens: List[int]) -> Optional["State"]:
         pass
 
 
@@ -22,7 +22,7 @@ class TerminationState(State):
     def get_valid_tokens(self, generated_text: str | List[int]) -> Set[int]:
         return {}
 
-    def update_state(self, generated_text: str) -> Optional["State"]:
+    def update_state(self, generated_tokens: List[int]) -> Optional["State"]:
         return None
 
 
@@ -31,23 +31,28 @@ class StringGenerationState(State):
         super().__init__(model, next_state)
         self.delimiters = self.vocabs.search_for_vocab(delimiters)
         self.started = False
+        self.generated_tokens = []
 
     def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
-        if len(generated_text) > 0:
-            self.started = True
         if not self.started:
+            self.started = True
             return self.vocabs.search_for_vocab("\"")
         else:
-            all_vocabs = self.vocabs.vocabs
-            return {id for _, id in all_vocabs.items() if "\n" not in _}
+            self.generated_tokens.append(generated_text[-1])
+            valid_tokens = set()
+            valid_tokens = self.vocabs.get_valid_tokens_match_str_re(self.vocabs.str_regex, self.generated_tokens)
+            valid_tokens.update(self.delimiters)
+            return valid_tokens
+            # all_vocabs = self.vocabs.vocabs
+            # return {id for _, id in all_vocabs.items() if "\n" not in _}
 
     # or called update_state
-    def update_state(self, next_token: int):
+    def update_state(self, generated_tokens: List[int]):
         """
         Check whether the current state has ended
         transit when delimiter (e.g. \") is reached? or when one function name is matched
         """
-        if next_token in self.delimiters and self.started:
+        if generated_tokens[-1] in self.delimiters and self.started:
             return self.next_state
 
 
@@ -63,15 +68,14 @@ class NumberGenerationState(State):
         valid_tokens = set()
         valid_tokens = self.vocabs.get_valid_tokens_match_number_re(self.vocabs.math_regex, generated_text)
         valid_tokens.update(self.delimiters)
-        print(f"valid_tokens: {valid_tokens}")
         return valid_tokens
 
-    def update_state(self, next_token: int):
+    def update_state(self, generated_tokens: List[int]):
         """
         Check whether the current state has ended
         transit when delimiter (e.g. ,}]) is reached? or when one function name is matched
         """
-        if next_token in self.delimiters:
+        if generated_tokens and generated_tokens[-1] in self.delimiters:
             return self.next_state
 
 
@@ -81,11 +85,11 @@ class LiteralState(State):
         super().__init__(model, next_state)
         self.text = text
 
-    def get_valid_tokens(self) -> Set[int]:
+    def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
         """"""
         return {}
 
-    def update_state(self):
+    def update_state(self, generated_tokens: List[int]):
         """"""
         return self.next_state
 
@@ -107,10 +111,10 @@ class SelectionState(State):
         valid_tokens.update(self.delimiters)
         return valid_tokens
 
-    def update_state(self, next_token: int):
+    def update_state(self, generated_tokens: List[int]):
         """
         Check whether the current state has ended
         transit when delimiter (e.g. whitespace) is reached? or when one function name is matched 
         """
-        if next_token in self.delimiters:
+        if generated_tokens and generated_tokens[-1] in self.delimiters:
             return self.next_state

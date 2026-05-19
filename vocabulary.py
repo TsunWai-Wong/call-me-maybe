@@ -17,6 +17,7 @@ class Vocabulary:
         self.math_regex = regex.compile(
             r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?"
         )
+        self.str_regex = regex.compile(r'"?(?:[^"\\]|\\.)*"?')
 
 
     def _get_all_vocabs(self, vocab_path) -> List[str]:
@@ -44,17 +45,27 @@ class Vocabulary:
                 valid_tokens.add(token_id)
         return valid_tokens
 
+    def get_valid_tokens_match_str_re(self, reg_exp, generated_tokens: List[int]) -> Set[int]:
+        valid_tokens = set()
+
+        for _, token_id in self.vocabs.items():
+            prefix = generated_tokens + [token_id]
+            prefix_str = self.model.decode(prefix)
+            match = reg_exp.fullmatch(prefix_str, partial=True)
+            if match or (match and match.partial):
+                valid_tokens.add(token_id)
+        print(f"Number of valid tokens: {len(valid_tokens)}")
+        return valid_tokens
+
     def get_valid_tokens_match_number_re(self, reg_exp, generated_tokens: List[int]) -> Set[int]:
         valid_tokens = set()
 
         for _, token_id in self.math_vocabs.items():
             prefix = generated_tokens + [token_id]
             prefix_str = self.model.decode(prefix)
-            print(f"Prefix string: {prefix_str}")
-            match = self.math_regex.fullmatch(prefix_str, partial=True)
+            match = reg_exp.fullmatch(prefix_str, partial=True)
             if match or (match and match.partial):
                 valid_tokens.add(token_id)
-                print(f"{_} is allowed")
         return valid_tokens
 
     def get_valid_tokens_match_str(self, patterns: List[str], generated_text: str) -> Dict[str, int]:
@@ -96,5 +107,3 @@ if __name__ == "__main__":
     print(vocab.search_for_vocab([".", "]", "}"]))
 
     print(model.decode([16485, 5746, 25, 5168, 2891, 32964, 11, 5168, 1889]))
-    #print(model.decode([2610, 1410, 990, 279, 2701, 5746, 25, 5168, 2891]))
-    # print(model.decode([5097, 510, 1302, 3744, 3712, 41861, 382, 13314, 510]))

@@ -1,7 +1,6 @@
 from typing import List, Set
 import numpy as np
-from state_machine import State, LiteralState, SelectionState, StringGenerationState, NumberGenerationState, TerminationState
-from llm_sdk import Small_LLM_Model
+from state_machine import LiteralState, TerminationState
 
 
 class ConstrainedDecoder:
@@ -56,14 +55,17 @@ class ConstrainedDecoder:
 
         for _ in range(max_tokens):
             if isinstance(state, LiteralState):
-                return state.text
-            if isinstance(state, TerminationState):
+                tokens = self.model.encode(state.text)
+                generated_tokens += tokens.tolist()[0]
+                next_state = state.update_state(tokens)
+                state = next_state
+            elif isinstance(state, TerminationState):
                 return self.model.decode(generated_tokens)
             else:
                 valid_tokens = state.get_valid_tokens(generated_tokens)
                 prompt = sys_prompt_tokens + generated_tokens
                 next_token = self._get_next_token(prompt, valid_tokens)
-                next_state = state.update_state(next_token)
+                next_state = state.update_state(generated_tokens + [next_token])
                 if next_state:
                     state = next_state
                 else:
