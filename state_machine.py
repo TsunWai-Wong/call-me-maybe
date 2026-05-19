@@ -27,38 +27,52 @@ class TerminationState(State):
 
 
 class StringGenerationState(State):
-    def __init__(self, model, next_state: State, delimiter: str):
+    def __init__(self, model, next_state: State, delimiters: List[str]):
         super().__init__(model, next_state)
-        self.delimiter = delimiter
+        self.delimiters = self.vocabs.search_for_vocab(delimiters)
+        self.started = False
 
-    def get_valid_tokens(self) -> Set[int]:
-        pass
+    def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
+        if len(generated_text):
+            self.started = True
+        if not self.started:
+            return self.vocabs.search_for_vocab("\"")
+        else:
+            all_vocabs = self.vocabs.vocabs
+            return {id for _, id in all_vocabs.items() if "\n" not in _}
 
     # or called update_state
-    def transit_next_state(self):
+    def update_state(self, next_token: int):
         """
         Check whether the current state has ended
         transit when delimiter (e.g. \") is reached? or when one function name is matched
         """
-        pass
+        if next_token in self.delimiters and self.started:
+            return self.next_state
 
 
 class NumberGenerationState(State):
     def __init__(self, model, next_state, delimiters: List[str]):
-        pass
+        super().__init__(model, next_state)
+        self.delimiters = self.vocabs.search_for_vocab(delimiters)
 
-    def get_valid_tokens(self) -> Set[int]:
+    def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
         """
         by string matching in the Vocabulary class
         """
-        pass
+        valid_tokens = set()
+        valid_tokens = self.vocabs.get_valid_tokens_match_number_re(self.vocabs.math_regex, generated_text)
+        valid_tokens.update(self.delimiters)
+        print(f"valid_tokens: {valid_tokens}")
+        return valid_tokens
 
-    def transit_next_state(self):
+    def update_state(self, next_token: int):
         """
         Check whether the current state has ended
         transit when delimiter (e.g. ,}]) is reached? or when one function name is matched
         """
-        pass
+        if next_token in self.delimiters:
+            return self.next_state
 
 
 class LiteralState(State):

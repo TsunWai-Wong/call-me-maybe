@@ -49,7 +49,7 @@ class ConstrainedDecoder:
         - get the updated state
         - keep getting the next token according to the updated state
         """
-        # get_valid_tokems
+        # get_valid_tokens
 
         generated_tokens = []
         sys_prompt_tokens = self.model.encode(prompt).tolist()[0]
@@ -70,3 +70,4 @@ class ConstrainedDecoder:
                     generated_tokens.append(next_token)
 
         # return the tokens anyway
+        return self.model.decode(generated_tokens)

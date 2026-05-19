@@ -48,12 +48,68 @@ Task: {prompt} <|im_end|>
         state = SelectionState(self.model, next_state, allowed_functions, ["]", "}"])
         return self.decoder.generate(state, sys_prompt, 10)
 
+    def _generate_parameters_number(self, prompt: str):
+        """
+        get list of required parameters
+
+        """
+        sys_prompt = """
+        <|im_start|>system
+You are an assistant to generate parameters for a function call according to an user's prompt.
+Rule:
+- After generating the exact number, you must generate a ] or } symbol to indicate the end of the value
+- Do not output a . symbol when you want to produce a integer number
+
+Function selected:
+{'name': 'fn_add_numbers', 'description': 'Add two numbers together and return their sum.', 'parameters': {'a': {'type': 'number'}, 'b': {'type': 'number'}}<|im_end|>
+<|im_start|>user
+User prompt: What is the sum of 265 and 345?<|im_end|>
+<|im_start|>assistant
+{'a': 
+"""
+        next_state = TerminationState(self.model, None)
+        state = NumberGenerationState(self.model, next_state, ["]", "}", " ", "!"])
+        result = self.decoder.generate(state, sys_prompt, 20)
+        print(f"Result: {result}")
+        return result
+    
     def _generate_parameters(self, prompt: str):
         """
         get list of required parameters
 
         """
+        sys_prompt = """
+        <|im_start|>system
+You are an assistant to extract parameters for a function call according to an user's prompt.
 
+For example:
+- Prompt: "Greet shrek"
+- Output: "parameters": {"s": "shrek"}
+
+Rule:
+- Output directly. Do not include the thinking process.
+
+Function selected:
+{
+    "name": "fn_reverse_string",
+    "description": "Reverse a string and return the reversed result.",
+    "parameters": {
+      "s": {
+        "type": "string"
+      }
+    }
+    }
+  }<|im_end|>
+<|im_start|>user
+Extract the parameters in the JSON object for this prompt: Reverse the string 'hello'<|im_end|>
+<|im_start|>assistant
+"parameters": {"s": "
+"""
+        next_state = TerminationState(self.model, None)
+        state = StringGenerationState(self.model, next_state, ["'", "\""])
+        result = self.decoder.generate(state, sys_prompt, 20)
+        print(f"Result: {result}")
+        return result
 
     def generate_output(self, prompt: str):
         """
