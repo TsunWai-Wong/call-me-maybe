@@ -101,12 +101,12 @@ Function selected:
     }
   }<|im_end|>
 <|im_start|>user
-Extract the parameters in the JSON object for this prompt: Reverse the string 'hello'<|im_end|>
+Extract the parameters in the JSON object for this prompt: Reverse the string 'hello my friend'<|im_end|>
 <|im_start|>assistant
-"parameters": {"s": "
+"parameters": {"s": 
 """
         next_state = TerminationState(self.model, None)
-        state = StringGenerationState(self.model, next_state, ["'", "\""])
+        state = StringGenerationState(self.model, next_state, ["\"", ",", "."])
         result = self.decoder.generate(state, sys_prompt, 20)
         print(f"Result: {result}")
         return result

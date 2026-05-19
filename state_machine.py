@@ -33,7 +33,7 @@ class StringGenerationState(State):
         self.started = False
 
     def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
-        if len(generated_text):
+        if len(generated_text) > 0:
             self.started = True
         if not self.started:
             return self.vocabs.search_for_vocab("\"")
