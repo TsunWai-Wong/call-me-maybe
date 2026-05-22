@@ -17,9 +17,9 @@ def main():
 
     generator = OutputGenerator(model, input)
     for prompt in prompts:
-        # print(prompt)
-        # print(generator.generate_output(prompt))
-        generator._generate_parameters(prompt)
+        function_name = generator._generate_name(prompt)
+        print(f"function name: {function_name}")
+        generator._generate_parameters(prompt, function_name)
 
     # except Exception as e:
     #     print(e)

@@ -18,7 +18,7 @@ class OutputGenerator:
         self.decoder = ConstrainedDecoder(model)
         self.functions = input.functions
 
-    def _generate_name(self, prompt: str):
+    def _generate_name(self, prompt: str) -> str:
         """
         get list of valid function names
         use constrained decoder to generate a function name
@@ -72,7 +72,7 @@ User prompt: What is the sum of 265 and 345?<|im_end|>
         result = self.decoder.generate(state, sys_prompt, 20)
         print(f"Result: {result}")
         return result
-    
+
     def _generate_parameters_string(self, prompt: str):
         """
         get list of required parameters
@@ -112,46 +112,59 @@ Extract the parameters in the JSON object for this prompt: Reverse the string 'h
         print(f"Result: {result}")
         return result
 
-    def _generate_parameters(self, prompt: str):
+    def _generate_parameters(self, prompt: str, function: str):
         """
         get list of required parameters
 
         """
-        sys_prompt = """
+        function_selected = next(
+            (f for f in self.functions if f.name == function),
+            None
+        )
+        # print(f"function selected: {function_selected}")
+
+        sys_prompt = f"""
         <|im_start|>system
 You are an assistant to extract parameters for a function call according to an user's prompt.
 
 For example:
 - Prompt: "Greet shrek"
-- Output: "parameters": {"s": "shrek"}
+- Output: "parameters": {{"s": "shrek"}}
 
 Rule:
 - Output directly. Do not include the thinking process.
 
-Function selected:
-{
-    "name": "fn_reverse_string",
-    "description": "Reverse a string and return the reversed result.",
-    "parameters": {
-      "s": {
-        "type": "string"
-      }
-    }
-    }
-  }<|im_end|>
+Function selected: {function_selected}
+<|im_end|>
 <|im_start|>user
-Extract the parameters in the JSON object for this prompt: Reverse the string 'hello my friend'<|im_end|>
+Extract the parameters in the JSON object for this prompt: {prompt}<|im_end|>
 <|im_start|>assistant
 "parameters": 
 """
+        # Key Logic
         end_state = TerminationState(self.model, None)
-        state_1 = LiteralState(self.model, end_state, "}")
-        state_2 = StringGenerationState(self.model, state_1, ["!"])
-        state_3 = LiteralState(self.model, state_2, "\"s\": ")
-        start_state = LiteralState(self.model, state_3, "{")
-        result = self.decoder.generate(start_state, sys_prompt, 20)
+        prev_state = LiteralState(self.model, end_state, "}")
+
+        # for loop
+        if function_selected:
+            param_count = len(function_selected.parameters) 
+            for param_name, param_info in reversed(function_selected.parameters.items()):
+                if param_info['type'] == "string":
+                    prev_state = StringGenerationState(self.model, prev_state, ["!"])
+                elif param_info['type'] == "number":
+                    prev_state = NumberGenerationState(self.model, prev_state, ["]", "}", " ", "!"])
+                prev_state = LiteralState(self.model, prev_state, f"\"{param_name}\": ")
+                if param_count > 1:
+                    prev_state = LiteralState(self.model, prev_state, ", ")
+                param_count -= 1
+        # Number/StringState(prev_state)
+        # prev_state = LiteralState(prev_state, "\"s\":")
+        # if needed, prev_state = LiteralState(prev_state, ", ")
+
+        start_state = LiteralState(self.model, prev_state, "{")
+        result = self.decoder.generate(start_state, sys_prompt, 100)
         print(f"Result: {result}")
-        return result
+        # return result
 
     def generate_output(self, prompt: str):
         """

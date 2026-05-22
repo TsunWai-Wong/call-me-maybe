@@ -38,7 +38,7 @@ class ConstrainedDecoder:
         sampled_index = np.random.choice(len(probs), p=probs)
         return valid_token_ids[sampled_index]
 
-    def generate(self, state, prompt: str, max_tokens: int) -> str | List[int]:
+    def generate(self, state, prompt: str, max_tokens: int) -> str:
         """
 
         if state == literal, return the original text
