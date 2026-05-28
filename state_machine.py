@@ -29,33 +29,31 @@ class TerminationState(State):
 class StringGenerationState(State):
     def __init__(self, model, next_state: State, delimiters: List[str]):
         super().__init__(model, next_state)
-        self.delimiters = self.vocabs.search_for_vocab(delimiters)
+        self.quote_tokens = self.vocabs.exact_quote_tokens
         self.started = False
+        self.has_open_quote = False
         self.generated_tokens = []
 
     def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
         if not self.started:
             self.started = True
-            return self.vocabs.search_for_vocab("\"")
-        else:
-            if generated_text:
-                self.generated_tokens.append(generated_text[-1])
-            valid_tokens = set()
-            valid_tokens = self.vocabs.get_valid_tokens_match_str_re(self.vocabs.str_regex, self.generated_tokens)
-            valid_tokens.update(self.delimiters)
-            return valid_tokens
-            # all_vocabs = self.vocabs.vocabs
-            # return {id for _, id in all_vocabs.items() if "\n" not in _}
+            return self.quote_tokens
+        if generated_text:
+            self.generated_tokens.append(generated_text[-1])
+        if len(self.generated_tokens) >= 20:
+            return self.vocabs.string_closer_tokens  # force a closer token
+        # return a union of both sets of vocabs
+        return self.vocabs.string_content_tokens | self.vocabs.string_closer_tokens
 
     def update_state(self, generated_tokens: List[int]):
-        """
-        Check whether the current state has ended
-        transit when delimiter (e.g. \") is reached? or when one function name is matched
-        """
-        if generated_tokens[-1] in self.delimiters and self.started:
-            return self.next_state
-        if len(self.generated_tokens) >= 20:
-            return self.next_state
+        last_token = generated_tokens[-1]
+        if not self.has_open_quote:
+            self.has_open_quote = True
+            return None
+        last_str = self.model.decode([last_token])
+        if '"' in last_str:
+            return LiteralState(self.model, self.next_state, '"')
+        return None
 
 
 class NumberGenerationState(State):

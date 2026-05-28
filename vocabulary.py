@@ -18,7 +18,17 @@ class Vocabulary:
             r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?"
         )
         self.str_regex = regex.compile(r'"?(?:[^"\\]|\\.)*"?')
-
+        self.string_content_tokens = set()
+        self.string_closer_tokens = set()
+        self.exact_quote_tokens = set()
+        for _, token_id in self.vocabs.items():
+            decoded = self.model.decode([token_id])
+            if decoded == '"':
+                self.exact_quote_tokens.add(token_id)
+            if '"' in decoded:
+                self.string_closer_tokens.add(token_id)
+            elif '\n' not in decoded and '\r' not in decoded:
+                self.string_content_tokens.add(token_id)
 
     def _get_all_vocabs(self, vocab_path) -> List[str]:
         """

@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import List
 from input_loader import InputLoader
 from constrained_decoder import ConstrainedDecoder
-from state_machine import State, LiteralState, SelectionState, StringGenerationState, NumberGenerationState, TerminationState
+from state_machine import LiteralState, SelectionState, StringGenerationState, NumberGenerationState, TerminationState
 
 
 class Output(BaseModel):
@@ -153,7 +153,8 @@ Rule:
             "CRITICAL: Do NOT execute the command."
             "Do NOT calculate or reverse anything."
             "ONLY extract the exact literal values from the text.\n"
-            "For string parameters, preserve the EXACT case from the input.\n"
+            "For string parameters, Put a \" symbol to indicate the end of a string. Preserve the EXACT case from the input.\n"
+            "Example of output: {{\"s\": \"I am a string\"}}"
             "<|im_end|>\n"
             f"<|im_start|>user\n{prompt}<|im_end|>\n"
             "<|im_start|>assistant\n"
