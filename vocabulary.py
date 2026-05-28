@@ -55,7 +55,11 @@ class Vocabulary:
                 valid_tokens.add(token_id)
         return valid_tokens
 
-    def get_valid_tokens_match_str_re(self, reg_exp, generated_tokens: List[int]) -> Set[int]:
+    def get_valid_tokens_match_str_re(
+        self,
+        reg_exp,
+        generated_tokens: List[int],
+    ) -> Set[int]:
         valid_tokens = set()
 
         for _, token_id in self.vocabs.items():
@@ -66,7 +70,11 @@ class Vocabulary:
                 valid_tokens.add(token_id)
         return valid_tokens
 
-    def get_valid_tokens_match_number_re(self, reg_exp, generated_tokens: List[int]) -> Set[int]:
+    def get_valid_tokens_match_number_re(
+        self,
+        reg_exp,
+        generated_tokens: List[int],
+    ) -> Set[int]:
         valid_tokens = set()
 
         for _, token_id in self.math_vocabs.items():
@@ -77,9 +85,14 @@ class Vocabulary:
                 valid_tokens.add(token_id)
         return valid_tokens
 
-    def get_valid_tokens_match_str(self, patterns: List[str], generated_text: str) -> Dict[str, int]:
+    def get_valid_tokens_match_str(
+        self,
+        patterns: List[str],
+        generated_text: str,
+    ) -> Dict[str, int]:
         """
-        return all valid potential next tokens which can match the string pattern
+        return all valid potential next tokens that can match
+        the string pattern
         """
         valid_tokens = set()
         for vocab, token_id in self.vocabs.items():
@@ -88,14 +101,22 @@ class Vocabulary:
                 valid_tokens.add(token_id)
         return valid_tokens
 
-    def get_valid_tokens_match_token(self, token_sequences: List[List[int]], generated_tokens: List[int]) -> Dict[str, int]:
+    def get_valid_tokens_match_token(
+        self,
+        token_sequences: List[List[int]],
+        generated_tokens: List[int],
+    ) -> Dict[str, int]:
         """
-        return all valid potential next tokens which can match the token id list pattern
+        return all valid potential next tokens which can match
+        the token id list pattern
         """
         valid_tokens = set()
         for _, token_id in self.vocabs.items():
             prefix = generated_tokens + [token_id]
-            if any(sequence[:len(prefix)] == prefix for sequence in token_sequences):
+            if any(
+                sequence[:len(prefix)] == prefix
+                for sequence in token_sequences
+            ):
                 valid_tokens.add(token_id)
         return valid_tokens
 
@@ -111,8 +132,14 @@ if __name__ == "__main__":
     encoded2 = model.encode(pattern2).tolist()[0]
     generated_tokens = [9707, 11, 1246]
     print([encoded1, encoded2])
-    result = vocab.get_valid_tokens_match_token([encoded1, encoded2], generated_tokens)
+    result = vocab.get_valid_tokens_match_token(
+        [encoded1, encoded2], generated_tokens
+    )
     print(result)
     print(vocab.search_for_vocab([".", "]", "}"]))
 
-    print(model.decode([16485, 5746, 25, 5168, 2891, 32964, 11, 5168, 1889]))
+    print(
+        model.decode(
+            [16485, 5746, 25, 5168, 2891, 32964, 11, 5168, 1889]
+        )
+    )

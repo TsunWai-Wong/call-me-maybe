@@ -43,7 +43,10 @@ class StringGenerationState(State):
         if len(self.generated_tokens) >= 20:
             return self.vocabs.string_closer_tokens  # force a closer token
         # return a union of both sets of vocabs
-        return self.vocabs.string_content_tokens | self.vocabs.string_closer_tokens
+        return (
+            self.vocabs.string_content_tokens
+            | self.vocabs.string_closer_tokens
+        )
 
     def update_state(self, generated_tokens: List[int]):
         last_token = generated_tokens[-1]
@@ -70,14 +73,18 @@ class NumberGenerationState(State):
         if self.started and generated_text:
             self.generated_tokens.append(generated_text[-1])
         valid_tokens = set()
-        valid_tokens = self.vocabs.get_valid_tokens_match_number_re(self.vocabs.math_regex, self.generated_tokens)
+        valid_tokens = self.vocabs.get_valid_tokens_match_number_re(
+            self.vocabs.math_regex,
+            self.generated_tokens,
+        )
         valid_tokens.update(self.delimiters)
         return valid_tokens
 
     def update_state(self, generated_tokens: List[int]):
         """
-        Check whether the current state has ended
-        transit when delimiter (e.g. ,}]) is reached? or when one function name is matched
+        Check whether the current state has ended.
+        Transit when delimiter (e.g. ,}]) is reached or when one
+        function name is matched.
         """
         self.started = True
         if generated_tokens and generated_tokens[-1] in self.delimiters:
@@ -107,21 +114,31 @@ class SelectionState(State):
     keep record of what have been generated
     return valid tokens
     """
-    def __init__(self, model, next_state, allowed_sequences: List[int], delimiters: List[str]):
+    def __init__(
+        self,
+        model,
+        next_state,
+        allowed_sequences: List[int],
+        delimiters: List[str],
+    ) -> None:
         super().__init__(model, next_state)
         self.allowed_sequences = allowed_sequences
         self.delimiters = self.vocabs.search_for_vocab(delimiters)
 
     def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
         valid_tokens = set()
-        valid_tokens = self.vocabs.get_valid_tokens_match_token(self.allowed_sequences, generated_text)
+        valid_tokens = self.vocabs.get_valid_tokens_match_token(
+            self.allowed_sequences,
+            generated_text,
+        )
         valid_tokens.update(self.delimiters)
         return valid_tokens
 
     def update_state(self, generated_tokens: List[int]):
         """
-        Check whether the current state has ended
-        transit when delimiter (e.g. whitespace) is reached? or when one function name is matched 
+        Check whether the current state has ended.
+        Transit when delimiter (e.g. whitespace) is reached or when one
+        function name is matched.
         """
         if generated_tokens and generated_tokens[-1] in self.delimiters:
             return self.next_state

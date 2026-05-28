@@ -29,7 +29,11 @@ class InputLoader:
         """
         with open(self.prompts_path) as file:
             data = json.load(file)
-        self.prompts = [item["prompt"] for item in data if isinstance(item.get("prompt"), str)]
+        self.prompts = [
+            item["prompt"]
+            for item in data
+            if isinstance(item.get("prompt"), str)
+        ]
         return self.prompts
 
     def read_func_definition(self) -> List[Function]:
@@ -46,6 +50,8 @@ class InputLoader:
         except FileNotFoundError:
             raise Exception("Error: file is not found")
         except PermissionError:
-            raise Exception("Error: file cannot be opened due to permission error")
+            raise Exception(
+                "Error: file cannot be opened due to permission error"
+            )
         except json.JSONDecodeError as e:
             raise Exception(f"Invalid JSON: {e}")

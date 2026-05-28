@@ -13,7 +13,11 @@ class ConstrainedDecoder:
         exp_x = np.exp(x)
         return exp_x / np.sum(exp_x)
 
-    def _get_next_token(self, prompt: List[int], valid_tokens: Set[int]) -> int:
+    def _get_next_token(
+        self,
+        prompt: List[int],
+        valid_tokens: Set[int],
+    ) -> int:
         """
         receive a list of valid tokens
         sample a next token
@@ -25,8 +29,11 @@ class ConstrainedDecoder:
         # sort the valid token ids set and turn it into a list
         valid_token_ids = sorted(valid_tokens)
 
-        # get a list of logits correspondent to the order of the valid token id list
-        logits_filtered = np.array([logits_list[i] for i in valid_token_ids])
+        # get a list of logits correspondent to the order of the valid
+        # token id list
+        logits_filtered = np.array(
+            [logits_list[i] for i in valid_token_ids]
+        )
 
         temperature = 0.000001
         logits_filtered = logits_filtered / temperature
@@ -65,7 +72,9 @@ class ConstrainedDecoder:
                 valid_tokens = state.get_valid_tokens(generated_tokens)
                 prompt = sys_prompt_tokens + generated_tokens
                 next_token = self._get_next_token(prompt, valid_tokens)
-                next_state = state.update_state(generated_tokens + [next_token])
+                next_state = state.update_state(
+                    generated_tokens + [next_token]
+                )
                 if next_state:
                     state = next_state
                 else:
