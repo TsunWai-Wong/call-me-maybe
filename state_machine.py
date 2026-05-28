@@ -38,7 +38,8 @@ class StringGenerationState(State):
             self.started = True
             return self.vocabs.search_for_vocab("\"")
         else:
-            self.generated_tokens.append(generated_text[-1])
+            if generated_text:
+                self.generated_tokens.append(generated_text[-1])
             valid_tokens = set()
             valid_tokens = self.vocabs.get_valid_tokens_match_str_re(self.vocabs.str_regex, self.generated_tokens)
             valid_tokens.update(self.delimiters)
@@ -46,7 +47,6 @@ class StringGenerationState(State):
             # all_vocabs = self.vocabs.vocabs
             # return {id for _, id in all_vocabs.items() if "\n" not in _}
 
-    # or called update_state
     def update_state(self, generated_tokens: List[int]):
         """
         Check whether the current state has ended
@@ -54,19 +54,25 @@ class StringGenerationState(State):
         """
         if generated_tokens[-1] in self.delimiters and self.started:
             return self.next_state
+        if len(self.generated_tokens) >= 20:
+            return self.next_state
 
 
 class NumberGenerationState(State):
     def __init__(self, model, next_state, delimiters: List[str]):
         super().__init__(model, next_state)
         self.delimiters = self.vocabs.search_for_vocab(delimiters)
+        self.started = False
+        self.generated_tokens = []
 
     def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
         """
         by string matching in the Vocabulary class
         """
+        if self.started and generated_text:
+            self.generated_tokens.append(generated_text[-1])
         valid_tokens = set()
-        valid_tokens = self.vocabs.get_valid_tokens_match_number_re(self.vocabs.math_regex, generated_text)
+        valid_tokens = self.vocabs.get_valid_tokens_match_number_re(self.vocabs.math_regex, self.generated_tokens)
         valid_tokens.update(self.delimiters)
         return valid_tokens
 
@@ -75,7 +81,10 @@ class NumberGenerationState(State):
         Check whether the current state has ended
         transit when delimiter (e.g. ,}]) is reached? or when one function name is matched
         """
+        self.started = True
         if generated_tokens and generated_tokens[-1] in self.delimiters:
+            return self.next_state
+        if len(self.generated_tokens) >= 10:
             return self.next_state
 
 

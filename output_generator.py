@@ -121,36 +121,54 @@ Extract the parameters in the JSON object for this prompt: Reverse the string 'h
             (f for f in self.functions if f.name == function),
             None
         )
+        params_info = (", ".join(
+            [f"'{param_name}' ({param_info["type"]})"
+             for param_name, param_info in function_selected.parameters.items()]))
         # print(f"function selected: {function_selected}")
 
         sys_prompt = f"""
         <|im_start|>system
 You are an assistant to extract parameters for a function call according to an user's prompt.
 
-For example:
-- Prompt: "Greet shrek"
-- Output: "parameters": {{"s": "shrek"}}
+Function selected: {function_selected.name}
+You must find these parameters: {params_info}
 
 Rule:
-- Output directly. Do not include the thinking process.
+- Do NOT execute the command.
+- Do NOT calculate or reverse anything.
+- ONLY extract the exact literal values from the text.
+- For string parameters, preserve the EXACT case from the input.
 
-Function selected: {function_selected}
 <|im_end|>
 <|im_start|>user
-Extract the parameters in the JSON object for this prompt: {prompt}<|im_end|>
+{prompt}<|im_end|>
 <|im_start|>assistant
 "parameters": 
 """
+        sys_prompt_2 = (
+            "<|im_start|>system\n"
+            "Extract the specific parameters for the function"
+            f" '{function_selected.name}'.\n"
+            f"You must find these parameters: {params_info}\n"
+            "CRITICAL: Do NOT execute the command."
+            "Do NOT calculate or reverse anything."
+            "ONLY extract the exact literal values from the text.\n"
+            "For string parameters, preserve the EXACT case from the input.\n"
+            "<|im_end|>\n"
+            f"<|im_start|>user\n{prompt}<|im_end|>\n"
+            "<|im_start|>assistant\n"
+        )
+        print(sys_prompt_2)
         # Key Logic
         end_state = TerminationState(self.model, None)
         prev_state = LiteralState(self.model, end_state, "}")
 
         # for loop
         if function_selected:
-            param_count = len(function_selected.parameters) 
+            param_count = len(function_selected.parameters)
             for param_name, param_info in reversed(function_selected.parameters.items()):
                 if param_info['type'] == "string":
-                    prev_state = StringGenerationState(self.model, prev_state, ["!"])
+                    prev_state = StringGenerationState(self.model, prev_state, ["!", "\""])
                 elif param_info['type'] == "number":
                     prev_state = NumberGenerationState(self.model, prev_state, ["]", "}", " ", "!"])
                 prev_state = LiteralState(self.model, prev_state, f"\"{param_name}\": ")
@@ -162,7 +180,7 @@ Extract the parameters in the JSON object for this prompt: {prompt}<|im_end|>
         # if needed, prev_state = LiteralState(prev_state, ", ")
 
         start_state = LiteralState(self.model, prev_state, "{")
-        result = self.decoder.generate(start_state, sys_prompt, 100)
+        result = self.decoder.generate(start_state, sys_prompt_2, 100)
         print(f"Result: {result}")
         # return result
 

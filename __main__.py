@@ -16,11 +16,13 @@ def main():
     prompts = input.prompts
 
     generator = OutputGenerator(model, input)
+    i = 0
     for prompt in prompts:
-        function_name = generator._generate_name(prompt)
-        print(f"function name: {function_name}")
-        generator._generate_parameters(prompt, function_name)
-
+        if i > 7:
+            function_name = generator._generate_name(prompt)
+            print(f"function name: {function_name}")
+            generator._generate_parameters(prompt, function_name)
+        i += 1
     # except Exception as e:
     #     print(e)
 

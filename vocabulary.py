@@ -54,7 +54,6 @@ class Vocabulary:
             match = reg_exp.fullmatch(prefix_str, partial=True)
             if match or (match and match.partial):
                 valid_tokens.add(token_id)
-        print(f"Number of valid tokens: {len(valid_tokens)}")
         return valid_tokens
 
     def get_valid_tokens_match_number_re(self, reg_exp, generated_tokens: List[int]) -> Set[int]:
