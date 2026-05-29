@@ -1,10 +1,11 @@
 import json
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict
 from input_loader import InputLoader
 from llm_sdk import Small_LLM_Model
 from constrained_decoder import ConstrainedDecoder
 from state_machine import (
+    State,
     LiteralState,
     SelectionState,
     StringGenerationState,
@@ -24,7 +25,7 @@ class Output(BaseModel):
     """
     prompt: str
     name: str
-    parameters: List
+    parameters: List[object]
 
 
 class OutputGenerator:
@@ -113,17 +114,20 @@ Task: {prompt} <|im_end|>
             (f for f in self.functions if f.name == function),
             None,
         )
-        params_info = ", ".join(
-            [
-                f"'{param_name}' ({param_info['type']})"
-                for param_name, param_info in
-                function_selected.parameters.items()
-            ]
-        )
+        function_name = function_selected.name if function_selected else "None"
+        params_info = ""
+        if function_selected is not None and function_selected.parameters:
+            params_info = ", ".join(
+                [
+                    f"'{param_name}' ({param_info['type']})"
+                    for param_name, param_info in
+                    function_selected.parameters.items()
+                ]
+            )
         sys_prompt = (
             "<|im_start|>system\n"
             "Extract the specific parameters for the function"
-            f" '{function_selected.name}'.\n"
+            f" '{function_name}'.\n"
             f"You must find these parameters: {params_info}\n"
             "CRITICAL: Do NOT execute the command."
             "Do NOT calculate or reverse anything."
@@ -138,7 +142,7 @@ Task: {prompt} <|im_end|>
         )
 
         end_state = TerminationState(self.model, None)
-        prev_state = LiteralState(self.model, end_state, "}")
+        prev_state: State = LiteralState(self.model, end_state, "}")
 
         if function_selected:
             param_count = len(function_selected.parameters)
@@ -148,8 +152,7 @@ Task: {prompt} <|im_end|>
                 if param_info['type'] == "string":
                     prev_state = StringGenerationState(
                         self.model,
-                        prev_state,
-                        ["!", "\""],
+                        prev_state
                     )
                 elif param_info['type'] == "number":
                     prev_state = NumberGenerationState(
@@ -174,7 +177,7 @@ Task: {prompt} <|im_end|>
         result = self.decoder.generate(start_state, sys_prompt, 100)
         return result
 
-    def generate_output(self, prompt: str):
+    def generate_output(self, prompt: str) -> Dict[str, object]:
         """
         Generate a function-call result dict for a single prompt.
 

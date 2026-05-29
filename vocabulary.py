@@ -65,7 +65,7 @@ class Vocabulary:
 
         try:
             with open(vocab_path) as file:
-                data = json.load(file)
+                data: Dict[str, int] = json.load(file)
             return data
         except FileNotFoundError:
             raise Exception("Error: Vocab file is not found")
@@ -73,14 +73,14 @@ class Vocabulary:
             raise Exception("Error: Vocab file cannot be opened"
                             "due to permission error")
 
-    def search_for_vocab(self, targets: List[str]) -> Set[int] | None:
+    def search_for_vocab(self, targets: List[str]) -> Set[int]:
         """Return token IDs whose vocabulary string is in targets.
 
         Args:
             targets (List[str]): Token strings to look up.
 
         Returns:
-            Set[int] | None: Matching token IDs.
+            Set[int]: Matching token IDs.
         """
         valid_tokens = set()
         for vocab, token_id in self.vocabs.items():
@@ -90,7 +90,7 @@ class Vocabulary:
 
     def get_valid_tokens_number(
         self,
-        reg_exp: regex.Pattern,
+        reg_exp: regex.Pattern[str],
         generated_tokens: List[int],
     ) -> Set[int]:
         """

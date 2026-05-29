@@ -8,7 +8,7 @@ PROMPTS_PATH = "./data/input/function_calling_tests.json"
 FUNCTIONS_PATH = "data/input/functions_definition.json"
 
 
-def main():
+def main() -> None:
     """
     Load inputs, generate function-call outputs, and write results.
     """

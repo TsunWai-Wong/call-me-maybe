@@ -14,7 +14,7 @@ class State(ABC):
         next_state (State | None): State to transition to after this one.
     """
 
-    def __init__(self, model: Small_LLM_Model, next_state: "State"):
+    def __init__(self, model: Small_LLM_Model, next_state: Optional["State"]):
         """
         Initialize State with a model and the successor state.
 
@@ -38,7 +38,7 @@ class State(ABC):
         Returns:
             Set[int]: Allowed next token IDs.
         """
-        pass
+        ...
 
     @abstractmethod
     def update_state(self, generated_tokens: List[int]) -> Optional["State"]:
@@ -51,7 +51,7 @@ class State(ABC):
         Returns:
             State | None: Next state if a transition occurred, else None.
         """
-        pass
+        ...
 
 
 class TerminationState(State):
@@ -69,7 +69,7 @@ class TerminationState(State):
         Returns:
             Set[int]: Always empty.
         """
-        return {}
+        return set()
 
     def update_state(self, generated_tokens: List[int]) -> State | None:
         """
@@ -98,7 +98,7 @@ class StringGenerationState(State):
 
     def __init__(self,
                  model: Small_LLM_Model,
-                 next_state: State):
+                 next_state: Optional[State]):
         """
         Initialize StringGenerationState.
 
@@ -110,7 +110,7 @@ class StringGenerationState(State):
         self.quote_tokens = self.vocabs.exact_quote_tokens
         self.started = False
         self.has_open_quote = False
-        self.generated_tokens = []
+        self.generated_tokens: List[int] = []
 
     def get_valid_tokens(self, generated_tokens: List[int]) -> Set[int]:
         """
@@ -168,7 +168,9 @@ class NumberGenerationState(State):
         generated_tokens (List[int]): Tokens produced so far for the number.
     """
 
-    def __init__(self, model, next_state, delimiters: List[str]):
+    def __init__(self, model: Small_LLM_Model,
+                 next_state: Optional[State],
+                 delimiters: List[str]):
         """
         Initialize NumberGenerationState.
 
@@ -180,7 +182,7 @@ class NumberGenerationState(State):
         super().__init__(model, next_state)
         self.delimiters = self.vocabs.search_for_vocab(delimiters)
         self.started = False
-        self.generated_tokens = []
+        self.generated_tokens: List[int] = []
 
     def get_valid_tokens(self, generated_tokens: List[int]) -> Set[int]:
         """
@@ -194,7 +196,7 @@ class NumberGenerationState(State):
         """
         if self.started and generated_tokens:
             self.generated_tokens.append(generated_tokens[-1])
-        valid_tokens = set()
+        valid_tokens: Set[int] = set()
         valid_tokens = self.vocabs.get_valid_tokens_number(
             self.vocabs.number_regex,
             self.generated_tokens,
@@ -217,6 +219,7 @@ class NumberGenerationState(State):
             return self.next_state
         if len(self.generated_tokens) >= 10:
             return self.next_state
+        return None
 
 
 class LiteralState(State):
@@ -227,7 +230,10 @@ class LiteralState(State):
         text (str): The literal text to emit.
     """
 
-    def __init__(self, model, next_state, text):
+    def __init__(self,
+                 model: Small_LLM_Model,
+                 next_state: Optional[State],
+                 text: str):
         """
         Initialize LiteralState with the text to emit.
 
@@ -249,7 +255,7 @@ class LiteralState(State):
         Returns:
             Set[int]: Always empty.
         """
-        return {}
+        return set()
 
     def update_state(self, generated_tokens: List[int]) -> State | None:
         """
@@ -277,8 +283,8 @@ class SelectionState(State):
 
     def __init__(
         self,
-        model,
-        next_state,
+        model: Small_LLM_Model,
+        next_state: Optional[State],
         allowed_sequences: List[List[int]],
         delimiters: List[str],
     ) -> None:
@@ -305,7 +311,7 @@ class SelectionState(State):
             Set[int]: Tokens consistent with at least one allowed sequence,
                 plus delimiters.
         """
-        valid_tokens = set()
+        valid_tokens: Set[int] = set()
         valid_tokens = self.vocabs.get_valid_tokens_sequences(
             self.allowed_sequences,
             generated_tokens,
@@ -324,3 +330,4 @@ class SelectionState(State):
         """
         if generated_tokens and generated_tokens[-1] in self.delimiters:
             return self.next_state
+        return None

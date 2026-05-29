@@ -1,22 +1,23 @@
 import json
+from typing import List, Dict
 from pathlib import Path
 
 
 class OutputValidator:
     """Validate and persist generated function-call outputs."""
 
-    def validate_parameters(self):
+    def validate_parameters(self) -> None:
         """Validate that generated parameter values match expected types.
 
         Returns:
             OutputValidator: Self, for method chaining.
         """
         # check whether the data types are correct
-        return self
+        pass
 
     def write_output(
         self,
-        output: dict | list[dict],
+        output: Dict[str, object] | List[Dict[str, object]],
         output_path: str = "data/output/function_calling_results.json",
     ) -> None:
         """

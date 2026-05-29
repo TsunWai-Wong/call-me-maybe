@@ -1,6 +1,8 @@
 from typing import List, Set
 import numpy as np
+from numpy.typing import NDArray
 from state_machine import State, LiteralState, TerminationState
+from llm_sdk import Small_LLM_Model
 
 
 class ConstrainedDecoder:
@@ -11,7 +13,7 @@ class ConstrainedDecoder:
         model: The language model used for logits and decoding.
     """
 
-    def __init__(self, model) -> None:
+    def __init__(self, model: Small_LLM_Model) -> None:
         """
         Initialize ConstrainedDecoder with a language model.
 
@@ -21,7 +23,7 @@ class ConstrainedDecoder:
         self.model = model
 
     @staticmethod
-    def _softmax(x: np.ndarray) -> np.ndarray:
+    def _softmax(x: NDArray[np.float64]) -> NDArray[np.float64]:
         """
         Compute numerically stable softmax probabilities.
 
@@ -31,9 +33,10 @@ class ConstrainedDecoder:
         Returns:
             numpy.ndarray: Probability distribution over x.
         """
-        x = x - np.max(x)   # stability trick
-        exp_x = np.exp(x)
-        return exp_x / np.sum(exp_x)
+        shifted_x: NDArray[np.float64] = x - np.max(x)   # stability
+        exp_x: NDArray[np.float64] = np.exp(shifted_x)
+        probs: NDArray[np.float64] = exp_x / np.sum(exp_x)
+        return probs
 
     def _get_next_token(
         self,
@@ -87,21 +90,22 @@ class ConstrainedDecoder:
         Returns:
             str: Decoded output string.
         """
-        generated_tokens = []
+        generated_tokens: List[int] = []
         sys_prompt_tokens = self.model.encode(prompt).tolist()[0]
 
         for _ in range(max_tokens):
             if isinstance(state, LiteralState):
                 tokens = self.model.encode(state.text)
                 generated_tokens += tokens.tolist()[0]
-                next_state = state.update_state(tokens)
-                state = next_state
+                next_state = state.update_state(generated_tokens)
+                if next_state:
+                    state = next_state
             elif isinstance(state, TerminationState):
                 return self.model.decode(generated_tokens)
             else:
                 valid_tokens = state.get_valid_tokens(generated_tokens)
-                prompt = sys_prompt_tokens + generated_tokens
-                next_token = self._get_next_token(prompt, valid_tokens)
+                prompt_tokens = sys_prompt_tokens + generated_tokens
+                next_token = self._get_next_token(prompt_tokens, valid_tokens)
                 next_state = state.update_state(
                     generated_tokens + [next_token]
                 )
