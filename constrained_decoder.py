@@ -1,14 +1,36 @@
 from typing import List, Set
 import numpy as np
-from state_machine import LiteralState, TerminationState
+from state_machine import State, LiteralState, TerminationState
 
 
 class ConstrainedDecoder:
+    """
+    Drive constrained token-by-token generation using a state machine.
+
+    Attributes:
+        model: The language model used for logits and decoding.
+    """
+
     def __init__(self, model) -> None:
+        """
+        Initialize ConstrainedDecoder with a language model.
+
+        Args:
+            model: The language model instance.
+        """
         self.model = model
 
     @staticmethod
-    def softmax(x):
+    def _softmax(x: np.ndarray) -> np.ndarray:
+        """
+        Compute numerically stable softmax probabilities.
+
+        Args:
+            x: Array of raw logit values.
+
+        Returns:
+            numpy.ndarray: Probability distribution over x.
+        """
         x = x - np.max(x)   # stability trick
         exp_x = np.exp(x)
         return exp_x / np.sum(exp_x)
@@ -19,9 +41,14 @@ class ConstrainedDecoder:
         valid_tokens: Set[int],
     ) -> int:
         """
-        receive a list of valid tokens
-        sample a next token
-        return a next token
+        Sample the next token from a restricted set of valid tokens.
+
+        Args:
+            prompt (List[int]): Token IDs of the current context.
+            valid_tokens (Set[int]): Allowed next token IDs.
+
+        Returns:
+            int: The sampled next token ID.
         """
         # logits of all vocabs
         logits_list = self.model.get_logits_from_input_ids(prompt)
@@ -38,25 +65,28 @@ class ConstrainedDecoder:
         temperature = 0.000001
         logits_filtered = logits_filtered / temperature
 
-        # turn the list of logits to a list of probability
-        probs = self.softmax(logits_filtered)
+        # turn the array of logits to a array of probability
+        probs = self._softmax(logits_filtered)
 
         # Sample an index, then map back to the real token ID
         sampled_index = np.random.choice(len(probs), p=probs)
         return valid_token_ids[sampled_index]
 
-    def generate(self, state, prompt: str, max_tokens: int) -> str:
+    def generate(self, state: State, prompt: str, max_tokens: int) -> str:
         """
+        Generate a constrained output string driven by a state machine.
 
-        if state == literal, return the original text
-        if state == termination, return the accumlated text
-        else,
-        - keep getting the next token
-        - get the updated state
-        - keep getting the next token according to the updated state
+        Iterates up to max_tokens steps. At each step the current state
+        supplies the allowed tokens.
+
+        Args:
+            state (State): Initial state of the state machine.
+            prompt (str): System/context prompt to condition generation.
+            max_tokens (int): Maximum number of tokens to generate.
+
+        Returns:
+            str: Decoded output string.
         """
-        # get_valid_tokens
-
         generated_tokens = []
         sys_prompt_tokens = self.model.encode(prompt).tolist()[0]
 
@@ -80,5 +110,4 @@ class ConstrainedDecoder:
                 else:
                     generated_tokens.append(next_token)
 
-        # return the tokens anyway
         return self.model.decode(generated_tokens)

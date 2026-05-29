@@ -2,6 +2,7 @@ import json
 from pydantic import BaseModel
 from typing import List
 from input_loader import InputLoader
+from llm_sdk import Small_LLM_Model
 from constrained_decoder import ConstrainedDecoder
 from state_machine import (
     LiteralState,
@@ -13,25 +14,51 @@ from state_machine import (
 
 
 class Output(BaseModel):
+    """
+    Structured result for a single function-call generation.
+
+    Attributes:
+        prompt (str): The original user prompt.
+        name (str): The predicted function name.
+        parameters (List): The extracted parameter values.
+    """
     prompt: str
     name: str
     parameters: List
 
 
 class OutputGenerator:
+    """
+    Generate structured function-call outputs using constrained decoding.
 
-    def __init__(self, model, input: InputLoader) -> None:
+    Attributes:
+        model: The language model instance.
+        decoder (ConstrainedDecoder): Decoder driving constrained generation.
+        functions (List[Function]): Available function definitions.
+    """
+
+    def __init__(self, model: Small_LLM_Model, input: InputLoader) -> None:
+        """
+        Initialize OutputGenerator with a model and loaded input.
+
+        Args:
+            model: The language model instance.
+            input (InputLoader): Loaded input containing function definitions.
+        """
         self.model = model
         self.decoder = ConstrainedDecoder(model)
         self.functions = input.functions
 
     def _generate_name(self, prompt: str) -> str:
         """
-        get list of valid function names
-        use constrained decoder to generate a function name
-        get valid tokens from the state
-        (state will use the filter in vocabulary)
+        Generate a valid function name for the given prompt.
+        Uses a SelectionState to constrain decoding to known function names.
 
+        Args:
+            prompt (str): The user task description.
+
+        Returns:
+            str: The predicted function name.
         """
         functions_list = "\n".join(
             f"Function: {f.name} ({f.description})"
@@ -58,9 +85,7 @@ Task: {prompt} <|im_end|>
             self.model.encode(f.name).tolist()[0]
             for f in self.functions
         ]
-        # print(f"allowed function tokens: {allowed_functions}")
         next_state = TerminationState(self.model, None)
-        # footstop can not be used
         state = SelectionState(
             self.model,
             next_state,
@@ -71,8 +96,18 @@ Task: {prompt} <|im_end|>
 
     def _generate_parameters(self, prompt: str, function: str) -> str:
         """
-        get list of required parameters
+        Generate a JSON parameter string for the selected function.
 
+        Builds a state machine chain matching the parameter schema of
+        the named function, then drives constrained decoding to extract
+        parameter values from the prompt.
+
+        Args:
+            prompt (str): The user task description.
+            function (str): The function name whose parameters to extract.
+
+        Returns:
+            str: A JSON string of extracted parameter values.
         """
         function_selected = next(
             (f for f in self.functions if f.name == function),
@@ -85,7 +120,6 @@ Task: {prompt} <|im_end|>
                 function_selected.parameters.items()
             ]
         )
-
         sys_prompt = (
             "<|im_start|>system\n"
             "Extract the specific parameters for the function"
@@ -102,7 +136,6 @@ Task: {prompt} <|im_end|>
             f"<|im_start|>user\n{prompt}<|im_end|>\n"
             "<|im_start|>assistant\n"
         )
-        print(sys_prompt)
 
         end_state = TerminationState(self.model, None)
         prev_state = LiteralState(self.model, end_state, "}")
@@ -143,9 +176,13 @@ Task: {prompt} <|im_end|>
 
     def generate_output(self, prompt: str):
         """
-        copy the prompt to output's prompt
-        use _generate_name
-        use _generate_parameters
+        Generate a function-call result dict for a single prompt.
+
+        Args:
+            prompt (str): The user task description.
+
+        Returns:
+            dict: Keys are 'prompt', 'name', and 'parameters'.
         """
         function_name = self._generate_name(prompt)
         function_parameters = self._generate_parameters(prompt, function_name)

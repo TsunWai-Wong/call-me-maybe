@@ -1,45 +1,134 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, Set
+from typing import List, Set, Optional
+from llm_sdk import Small_LLM_Model
 from vocabulary import Vocabulary
 
 
 class State(ABC):
-    def __init__(self, model, next_state: "State"):
+    """
+    Abstract base for a constrained-decoding state machine node.
+
+    Attributes:
+        model: The language model instance.
+        vocabs (Vocabulary): Vocabulary helper for token lookup.
+        next_state (State | None): State to transition to after this one.
+    """
+
+    def __init__(self, model: Small_LLM_Model, next_state: "State"):
+        """
+        Initialize State with a model and the successor state.
+
+        Args:
+            model: The language model instance.
+            next_state (State | None): State to transition to on completion.
+        """
         self.model = model
         self.vocabs = Vocabulary(model)
         self.next_state = next_state
 
     @abstractmethod
-    def get_valid_tokens(self, generated_text: str | List[int]) -> Set[int]:
+    def get_valid_tokens(self, generated_tokens: List[int]) -> Set[int]:
+        """
+        Return the set of token IDs allowed as the next token.
+
+        Args:
+            generated_tokens (List[int]): Text or token IDs generated
+                so far.
+
+        Returns:
+            Set[int]: Allowed next token IDs.
+        """
         pass
 
     @abstractmethod
     def update_state(self, generated_tokens: List[int]) -> Optional["State"]:
+        """
+        Determine whether to transition and return the next state.
+
+        Args:
+            generated_tokens (List[int]): Full token sequence so far.
+
+        Returns:
+            State | None: Next state if a transition occurred, else None.
+        """
         pass
 
 
 class TerminationState(State):
-    def get_valid_tokens(self, generated_text: str | List[int]) -> Set[int]:
+    """
+    Signal the end of string generation
+    """
+
+    def get_valid_tokens(self, generated_tokens: List[int]) -> Set[int]:
+        """
+        Return an empty set to halt generation.
+
+        Args:
+            generated_tokens (List[int]): Unused.
+
+        Returns:
+            Set[int]: Always empty.
+        """
         return {}
 
-    def update_state(self, generated_tokens: List[int]) -> Optional["State"]:
+    def update_state(self, generated_tokens: List[int]) -> State | None:
+        """
+        Return None to indicate no further transitions.
+
+        Args:
+            generated_tokens (List[int]): Unused.
+
+        Returns:
+            None: Always None.
+        """
         return None
 
 
 class StringGenerationState(State):
-    def __init__(self, model, next_state: State, delimiters: List[str]):
+    """
+    Generate a quoted JSON string value token by token.
+
+    Attributes:
+        quote_tokens (set[int]): Token IDs that decode to exactly '"'.
+        started (bool): Whether the opening quote has been emitted.
+        has_open_quote (bool): Whether the opening quote token was accepted
+            and the string has not been closed.
+        generated_tokens (List[int]): Tokens produced inside the string.
+    """
+
+    def __init__(self,
+                 model: Small_LLM_Model,
+                 next_state: State):
+        """
+        Initialize StringGenerationState.
+
+        Args:
+            model: The language model instance.
+            next_state (State): State to enter after the string closes.
+        """
         super().__init__(model, next_state)
         self.quote_tokens = self.vocabs.exact_quote_tokens
         self.started = False
         self.has_open_quote = False
         self.generated_tokens = []
 
-    def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
+    def get_valid_tokens(self, generated_tokens: List[int]) -> Set[int]:
+        """
+        Return tokens valid at the current position inside the string.
+
+        Forces a closing token after 20 content tokens to bound length.
+
+        Args:
+            generated_tokens (List[int]): Token IDs generated so far.
+
+        Returns:
+            Set[int]: Allowed next token IDs.
+        """
         if not self.started:
             self.started = True
             return self.quote_tokens
-        if generated_text:
-            self.generated_tokens.append(generated_text[-1])
+        if generated_tokens:
+            self.generated_tokens.append(generated_tokens[-1])
         if len(self.generated_tokens) >= 20:
             return self.vocabs.string_closer_tokens  # force a closer token
         # return a union of both sets of vocabs
@@ -48,7 +137,17 @@ class StringGenerationState(State):
             | self.vocabs.string_closer_tokens
         )
 
-    def update_state(self, generated_tokens: List[int]):
+    def update_state(self, generated_tokens: List[int]) -> State | None:
+        """
+        Transition to next state when a closing quote token is seen.
+
+        Args:
+            generated_tokens (List[int]): Full token sequence so far.
+
+        Returns:
+            LiteralState | None: A closing-quote literal state on close,
+                else None.
+        """
         last_token = generated_tokens[-1]
         if not self.has_open_quote:
             self.has_open_quote = True
@@ -60,31 +159,58 @@ class StringGenerationState(State):
 
 
 class NumberGenerationState(State):
+    """
+    Generate a JSON number value, terminating on a delimiter token.
+
+    Attributes:
+        delimiters (set[int]): Token IDs that end the number (e.g. '}', ']').
+        started (bool): Whether the first token has been accepted.
+        generated_tokens (List[int]): Tokens produced so far for the number.
+    """
+
     def __init__(self, model, next_state, delimiters: List[str]):
+        """
+        Initialize NumberGenerationState.
+
+        Args:
+            model: The language model instance.
+            next_state (State): State to enter after the number ends.
+            delimiters (List[str]): String tokens that terminate the number.
+        """
         super().__init__(model, next_state)
         self.delimiters = self.vocabs.search_for_vocab(delimiters)
         self.started = False
         self.generated_tokens = []
 
-    def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
+    def get_valid_tokens(self, generated_tokens: List[int]) -> Set[int]:
         """
-        by string matching in the Vocabulary class
+        Return tokens that extend the current number or are delimiters.
+
+        Args:
+            generated_tokens (List[int]): Token IDs generated so far.
+
+        Returns:
+            Set[int]: Allowed next token IDs.
         """
-        if self.started and generated_text:
-            self.generated_tokens.append(generated_text[-1])
+        if self.started and generated_tokens:
+            self.generated_tokens.append(generated_tokens[-1])
         valid_tokens = set()
-        valid_tokens = self.vocabs.get_valid_tokens_match_number_re(
-            self.vocabs.math_regex,
+        valid_tokens = self.vocabs.get_valid_tokens_number(
+            self.vocabs.number_regex,
             self.generated_tokens,
         )
         valid_tokens.update(self.delimiters)
         return valid_tokens
 
-    def update_state(self, generated_tokens: List[int]):
+    def update_state(self, generated_tokens: List[int]) -> State | None:
         """
-        Check whether the current state has ended.
-        Transit when delimiter (e.g. ,}]) is reached or when one
-        function name is matched.
+        Transition to next state on delimiter or max-length reached.
+
+        Args:
+            generated_tokens (List[int]): Full token sequence so far.
+
+        Returns:
+            State | None: next_state on termination, else None.
         """
         self.started = True
         if generated_tokens and generated_tokens[-1] in self.delimiters:
@@ -94,51 +220,107 @@ class NumberGenerationState(State):
 
 
 class LiteralState(State):
+    """
+    Emit a fixed literal string without sampling.
+
+    Attributes:
+        text (str): The literal text to emit.
+    """
+
     def __init__(self, model, next_state, text):
-        """"""
+        """
+        Initialize LiteralState with the text to emit.
+
+        Args:
+            model: The language model instance.
+            next_state (State | None): State to enter after the literal.
+            text (str): Literal string to append to the output.
+        """
         super().__init__(model, next_state)
         self.text = text
 
-    def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
-        """"""
+    def get_valid_tokens(self, generated_tokens: List[int]) -> Set[int]:
+        """
+        Return an empty set; literal tokens are appended directly.
+
+        Args:
+            generated_tokens (List[int]): Unused.
+
+        Returns:
+            Set[int]: Always empty.
+        """
         return {}
 
-    def update_state(self, generated_tokens: List[int]):
-        """"""
+    def update_state(self, generated_tokens: List[int]) -> State | None:
+        """
+        Immediately transition to the next state.
+
+        Args:
+            generated_tokens (List[int]): Unused.
+
+        Returns:
+            State | None: Always next_state.
+        """
         return self.next_state
 
 
 class SelectionState(State):
     """
-    receive a list of string as accepted options
-    keep record of what have been generated
-    return valid tokens
+    Constrain generation to one of several allowed token sequences.
+
+    Attributes:
+        allowed_sequences (List[List[int]]): Permitted complete token
+            sequences (e.g. one sequence per valid function name).
+        delimiters (set[int]): Token IDs that terminate selection
+            (e.g. ']', '}').
     """
+
     def __init__(
         self,
         model,
         next_state,
-        allowed_sequences: List[int],
+        allowed_sequences: List[List[int]],
         delimiters: List[str],
     ) -> None:
+        """
+        Initialize SelectionState.
+
+        Args:
+            model: The language model instance.
+            next_state (State | None): State to enter after selection ends.
+            allowed_sequences (List[List[int]]): Permitted token sequences.
+            delimiters (List[str]): String tokens that end the selection.
+        """
         super().__init__(model, next_state)
         self.allowed_sequences = allowed_sequences
         self.delimiters = self.vocabs.search_for_vocab(delimiters)
 
-    def get_valid_tokens(self, generated_text: List[int]) -> Set[int]:
+    def get_valid_tokens(self, generated_tokens: List[int]) -> Set[int]:
+        """Return tokens that keep the prefix on track for an allowed sequence.
+
+        Args:
+            generated_tokens (List[int]): Token IDs generated so far.
+
+        Returns:
+            Set[int]: Tokens consistent with at least one allowed sequence,
+                plus delimiters.
+        """
         valid_tokens = set()
-        valid_tokens = self.vocabs.get_valid_tokens_match_token(
+        valid_tokens = self.vocabs.get_valid_tokens_sequences(
             self.allowed_sequences,
-            generated_text,
+            generated_tokens,
         )
         valid_tokens.update(self.delimiters)
         return valid_tokens
 
-    def update_state(self, generated_tokens: List[int]):
-        """
-        Check whether the current state has ended.
-        Transit when delimiter (e.g. whitespace) is reached or when one
-        function name is matched.
+    def update_state(self, generated_tokens: List[int]) -> State | None:
+        """Transition to next state when a delimiter token is seen.
+
+        Args:
+            generated_tokens (List[int]): Full token sequence so far.
+
+        Returns:
+            State | None: next_state on delimiter, else None.
         """
         if generated_tokens and generated_tokens[-1] in self.delimiters:
             return self.next_state

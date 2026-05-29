@@ -9,6 +9,9 @@ FUNCTIONS_PATH = "data/input/functions_definition.json"
 
 
 def main():
+    """
+    Load inputs, generate function-call outputs, and write results.
+    """
     try:
         model = Small_LLM_Model()
 

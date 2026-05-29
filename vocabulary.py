@@ -5,19 +5,41 @@ from llm_sdk import Small_LLM_Model
 
 
 class Vocabulary:
-    def __init__(self, model):
+    """
+    Load and index a model's token vocabulary for constrained decoding.
+
+    Attributes:
+        model: The language model instance.
+        vocab_path (str): Path to the vocabulary JSON file.
+        vocabs (dict): Mapping of token string to token ID.
+        number_vocabs (dict): Subset of vocabs containing numeric characters.
+        number_regex: Compiled regex matching valid JSON numbers.
+        string_content_tokens (set[int]): Token IDs safe inside a JSON string
+            (no quote or newline characters).
+        string_closer_tokens (set[int]): Token IDs whose decoded form contains
+            a quote character and can close a JSON string.
+        exact_quote_tokens (set[int]): Token IDs that decode to exactly '"'.
+    """
+
+    def __init__(self, model: Small_LLM_Model) -> None:
+        """
+        Initialize Vocabulary and pre-compute token sets.
+
+        Args:
+            model: The language model used for encoding and decoding.
+        """
         self.model = model
         self.vocab_path = model.get_path_to_vocab_file()
         self.vocabs = self._get_all_vocabs(self.vocab_path)
-        self.math_vocabs = {
+        self.number_vocabs = {
             k: v
             for k, v in self.vocabs.items()
             if k in [char for char in "0123456789+-.Ee"]
         }
-        self.math_regex = regex.compile(
+        self.number_regex = regex.compile(
             r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?"
         )
-        self.str_regex = regex.compile(r'"?(?:[^"\\]|\\.)*"?')
+        # self.str_regex = regex.compile(r'"?(?:[^"\\]|\\.)*"?')
         self.string_content_tokens = set()
         self.string_closer_tokens = set()
         self.exact_quote_tokens = set()
@@ -30,10 +52,15 @@ class Vocabulary:
             elif '\n' not in decoded and '\r' not in decoded:
                 self.string_content_tokens.add(token_id)
 
-    def _get_all_vocabs(self, vocab_path) -> List[str]:
+    def _get_all_vocabs(self, vocab_path: str) -> Dict[str, int]:
         """
-        get vocab of the model
-        turn json to python dictionary
+        Load the vocabulary JSON file and return it as a dictionary.
+
+        Args:
+            vocab_path (str): Path to the vocabulary JSON file.
+
+        Returns:
+            dict: Mapping of token string to token ID.
         """
 
         try:
@@ -41,28 +68,46 @@ class Vocabulary:
                 data = json.load(file)
             return data
         except FileNotFoundError:
-            raise Exception("Vocab file is not found")
+            raise Exception("Error: Vocab file is not found")
         except PermissionError:
-            raise Exception("Vocab file cannot be opened"
+            raise Exception("Error: Vocab file cannot be opened"
                             "due to permission error")
 
-    # get from regular expression
-
     def search_for_vocab(self, targets: List[str]) -> Set[int] | None:
+        """Return token IDs whose vocabulary string is in targets.
+
+        Args:
+            targets (List[str]): Token strings to look up.
+
+        Returns:
+            Set[int] | None: Matching token IDs.
+        """
         valid_tokens = set()
         for vocab, token_id in self.vocabs.items():
             if vocab in targets:
                 valid_tokens.add(token_id)
         return valid_tokens
 
-    def get_valid_tokens_match_str_re(
+    def get_valid_tokens_number(
         self,
-        reg_exp,
+        reg_exp: regex.Pattern,
         generated_tokens: List[int],
     ) -> Set[int]:
-        valid_tokens = set()
+        """
+        Return number token IDs that extend generated_tokens and match reg_exp.
 
-        for _, token_id in self.vocabs.items():
+        Only tokens in number_vocabs (digits and numeric punctuation) are
+        checked, keeping the search space small.
+
+        Args:
+            reg_exp: Compiled regex supporting partial matching.
+            generated_tokens (List[int]): Token IDs generated so far.
+
+        Returns:
+            Set[int]: Token IDs that keep the decoded prefix valid.
+        """
+        valid_tokens = set()
+        for _, token_id in self.number_vocabs.items():
             prefix = generated_tokens + [token_id]
             prefix_str = self.model.decode(prefix)
             match = reg_exp.fullmatch(prefix_str, partial=True)
@@ -70,45 +115,22 @@ class Vocabulary:
                 valid_tokens.add(token_id)
         return valid_tokens
 
-    def get_valid_tokens_match_number_re(
-        self,
-        reg_exp,
-        generated_tokens: List[int],
-    ) -> Set[int]:
-        valid_tokens = set()
-
-        for _, token_id in self.math_vocabs.items():
-            prefix = generated_tokens + [token_id]
-            prefix_str = self.model.decode(prefix)
-            match = reg_exp.fullmatch(prefix_str, partial=True)
-            if match or (match and match.partial):
-                valid_tokens.add(token_id)
-        return valid_tokens
-
-    def get_valid_tokens_match_str(
-        self,
-        patterns: List[str],
-        generated_text: str,
-    ) -> Dict[str, int]:
-        """
-        return all valid potential next tokens that can match
-        the string pattern
-        """
-        valid_tokens = set()
-        for vocab, token_id in self.vocabs.items():
-            prefix = generated_text + vocab
-            if any(pattern.startswith(prefix) for pattern in patterns):
-                valid_tokens.add(token_id)
-        return valid_tokens
-
-    def get_valid_tokens_match_token(
+    def get_valid_tokens_sequences(
         self,
         token_sequences: List[List[int]],
         generated_tokens: List[int],
-    ) -> Dict[str, int]:
+    ) -> Set[int]:
         """
-        return all valid potential next tokens which can match
-        the token id list pattern
+        Return token IDs that extend generated_tokens toward a valid sequence.
+
+        Args:
+            token_sequences (List[List[int]]): Allowed complete token
+            sequences.
+            generated_tokens (List[int]): Token IDs generated so far.
+
+        Returns:
+            Dict[str, int]: Token IDs whose addition keeps the prefix on track
+                for at least one sequence in token_sequences.
         """
         valid_tokens = set()
         for _, token_id in self.vocabs.items():
@@ -119,27 +141,3 @@ class Vocabulary:
             ):
                 valid_tokens.add(token_id)
         return valid_tokens
-
-
-if __name__ == "__main__":
-    model = Small_LLM_Model()
-    print(model.get_path_to_vocab_file())
-    vocab = Vocabulary(model)
-
-    pattern1 = "Hello, how are you today?"
-    pattern2 = "Hello, how old are you now?"
-    encoded1 = model.encode(pattern1).tolist()[0]
-    encoded2 = model.encode(pattern2).tolist()[0]
-    generated_tokens = [9707, 11, 1246]
-    print([encoded1, encoded2])
-    result = vocab.get_valid_tokens_match_token(
-        [encoded1, encoded2], generated_tokens
-    )
-    print(result)
-    print(vocab.search_for_vocab([".", "]", "}"]))
-
-    print(
-        model.decode(
-            [16485, 5746, 25, 5168, 2891, 32964, 11, 5168, 1889]
-        )
-    )

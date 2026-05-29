@@ -3,8 +3,14 @@ from pathlib import Path
 
 
 class OutputValidator:
+    """Validate and persist generated function-call outputs."""
 
     def validate_parameters(self):
+        """Validate that generated parameter values match expected types.
+
+        Returns:
+            OutputValidator: Self, for method chaining.
+        """
         # check whether the data types are correct
         return self
 
@@ -13,7 +19,14 @@ class OutputValidator:
         output: dict | list[dict],
         output_path: str = "data/output/function_calling_results.json",
     ) -> None:
-        """Write the generated output dictionary or array to a JSON file."""
+        """
+        Write output to a JSON file, creating parent directories as needed.
+
+        Args:
+            output (dict | list[dict]): Data to serialise.
+            output_path (str): Destination path, relative to this module or
+                absolute.
+        """
         if not isinstance(output, (dict, list)):
             raise TypeError("output must be a dict or a list of dicts")
 
