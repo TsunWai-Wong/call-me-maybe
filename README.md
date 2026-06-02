@@ -277,7 +277,8 @@ Combine all components into a single JSON object:
 ### Input Validation Testing
 
 #### Missing/Malformed Files:
-- Input files don't exist
+- Invalid flag names for the programme → error message with invalid flag name(s)
+- Input files not found
 - Files not readable (permission denied)
 - Wrong file type (not JSON)
 - Invalid JSON syntax → error message with line number

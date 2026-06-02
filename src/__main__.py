@@ -1,11 +1,38 @@
+import argparse
+from pathlib import Path
 from src.input_loader import InputLoader
 from src.output_generator import OutputGenerator
 from src.output_validator import OutputValidator
 from llm_sdk import Small_LLM_Model
 
 
-PROMPTS_PATH = "./data/input/function_calling_tests.json"
-FUNCTIONS_PATH = "data/input/functions_definition.json"
+def parse_args() -> argparse.Namespace:
+    """
+    Parse command-line arguments for input and output file paths.
+
+    Returns:
+        argparse.Namespace: Parsed arguments with attributes:
+            - functions_definition (str): Path to function definitions JSON.
+            - input (str): Path to input prompts JSON.
+            - output (str): Path to write generated outputs JSON.
+    """
+    parser = argparse.ArgumentParser(description="Function Call Generation")
+    parser.add_argument(
+        "--functions_definition",
+        default="data/input/functions_definition.json",
+    )
+    parser.add_argument(
+        "--input",
+        default="data/input/function_calling_tests.json",
+    )
+    parser.add_argument(
+        "--output",
+        default="data/output/function_calls.json",
+    )
+    args, unknown = parser.parse_known_args()
+    if unknown:
+        raise ValueError(f"Error: Invalid flag(s): {', '.join(unknown)}")
+    return args
 
 
 def main() -> None:
@@ -13,9 +40,12 @@ def main() -> None:
     Load inputs, generate function-call outputs, and write results.
     """
     try:
+        args = parse_args()
+        output_path = str(Path(args.output).resolve())
+
         model = Small_LLM_Model()
 
-        input = InputLoader(PROMPTS_PATH, FUNCTIONS_PATH)
+        input = InputLoader(args.input, args.functions_definition)
         input.load()
         prompts = input.prompts
 
@@ -25,7 +55,7 @@ def main() -> None:
             results.append(generator.generate_output(prompt))
 
         validator = OutputValidator()
-        validator.write_output(results)
+        validator.write_output(results, output_path)
 
     except Exception as e:
         print(e)

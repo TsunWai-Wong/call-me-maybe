@@ -18,7 +18,7 @@ class OutputValidator:
     def write_output(
         self,
         output: Dict[str, object] | List[Dict[str, object]],
-        output_path: str = "data/output/function_calling_results.json",
+        output_path: str
     ) -> None:
         """
         Write output to a JSON file, creating parent directories as needed.

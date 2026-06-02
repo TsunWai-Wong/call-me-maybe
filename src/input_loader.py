@@ -70,7 +70,6 @@ class InputLoader:
         """
         with open(self.functions_path) as file:
             data = json.load(file)
-        print(data)
         self.functions = [Function(**item) for item in data]
         return self.functions
 
