@@ -1,7 +1,7 @@
 from typing import List, Set
 import numpy as np
 from numpy.typing import NDArray
-from state_machine import State, LiteralState, TerminationState
+from src.state_machine import State, LiteralState, TerminationState
 from llm_sdk import Small_LLM_Model
 
 

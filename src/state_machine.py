@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Set, Optional
 from llm_sdk import Small_LLM_Model
-from vocabulary import Vocabulary
+from src.vocabulary import Vocabulary
 
 
 class State(ABC):

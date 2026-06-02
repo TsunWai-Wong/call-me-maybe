@@ -1,6 +1,6 @@
-from input_loader import InputLoader
-from output_generator import OutputGenerator
-from output_validator import OutputValidator
+from src.input_loader import InputLoader
+from src.output_generator import OutputGenerator
+from src.output_validator import OutputValidator
 from llm_sdk import Small_LLM_Model
 
 

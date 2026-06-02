@@ -144,6 +144,11 @@ make clean
 - **JSON Specification:** https://www.json.org/json-en.html
 - **3Blue1Brown - Neural Networks:** https://www.youtube.com/watch?v=LPZh9BOjkQs&list=PLZHQObOWTQDM4E-dwvbnQTiyKDO-y9T2t
 
+AI was used for assistance for the following tasks
+1. Claude: Debugging
+2. VS Code Copilot: Documentation 
+3. ChatGPT: Key concepts clarification
+
 ---
 
 ## Algorithm Explanation
