@@ -278,9 +278,8 @@ Combine all components into a single JSON object:
 
 #### Missing/Malformed Files:
 - Invalid flag names for the programme → error message with invalid flag name(s)
-- Input files not found
-- Files not readable (permission denied)
-- Wrong file type (not JSON)
+- Input files not found → graceful error message
+- Files not readable (permission denied) → graceful error message
 - Invalid JSON syntax → error message with line number
 - Missing required keys → clear error indicating which keys
 - Wrong value types → type validation errors

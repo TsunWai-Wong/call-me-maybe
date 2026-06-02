@@ -43,16 +43,16 @@ def main() -> None:
         args = parse_args()
         output_path = str(Path(args.output).resolve())
 
-        model = Small_LLM_Model()
-
         input = InputLoader(args.input, args.functions_definition)
         input.load()
         prompts = input.prompts
 
+        model = Small_LLM_Model()
+
         results = []
         generator = OutputGenerator(model, input)
         for prompt in prompts:
-            results.append(generator.generate_output(prompt))
+            results.append(generator.generate_output(prompt.content))
 
         validator = OutputValidator()
         validator.write_output(results, output_path)
