@@ -1,6 +1,6 @@
 import json
-from typing import List, Dict
-from pydantic import BaseModel, Field, ValidationError
+from typing import Dict, List, Optional
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 
 class Prompt(BaseModel):
@@ -18,18 +18,50 @@ class FunctionDefinition(BaseModel):
     Represent a callable function definition loaded from JSON.
 
     Attributes:
-        name (str): Function identifier.
-        description (str): Human-readable description of what it does.
-        parameters (Dict[str, Dict[str, str]]): Parameter name to
-            metadata mapping (e.g. type information).
-        returns (Dict[str, str]): Return type metadata.
+        name (str): Function identifier (1–64 chars).
+        description (str): Human-readable description (1–256 chars).
+        parameters (Optional[Dict[str, Dict[str, str]]]): Parameter
+            name to ``{"type": "<type>"}`` mapping, or None.
+        returns (Dict[str, str]): Must be ``{"type": "<type>"}``.
     """
-    name: str
-    description: str
-    parameters: Dict[str, Dict[str, str]]
+    name: str = Field(min_length=1, max_length=64)
+    description: str = Field(min_length=1, max_length=256)
+    parameters: Optional[Dict[str, Dict[str, str]]] = None
     returns: Dict[str, str]
 
-    # validator can be added here
+    @field_validator("parameters")
+    @classmethod
+    def validate_parameters(
+        cls, v: Optional[Dict[str, Dict[str, str]]]
+    ) -> Optional[Dict[str, Dict[str, str]]]:
+        if v is None:
+            return v
+        valid_types = {"string", "number"}
+        for param_name, param_def in v.items():
+            if set(param_def.keys()) != {"type"}:
+                raise ValueError(
+                    f"parameter '{param_name}' must have "
+                    f"exactly the key 'type'"
+                )
+            if param_def["type"] not in valid_types:
+                raise ValueError(
+                    f"parameter '{param_name}' type must be "
+                    f"'string' or 'number'"
+                )
+        return v
+
+    @field_validator("returns")
+    @classmethod
+    def validate_returns(cls, v: Dict[str, str]) -> Dict[str, str]:
+        if set(v.keys()) != {"type"}:
+            raise ValueError(
+                "'returns' must contain exactly the key 'type'"
+            )
+        if v["type"] not in {"string", "number"}:
+            raise ValueError(
+                "'returns' type must be 'string' or 'number'"
+            )
+        return v
 
 
 class InputLoader:
@@ -100,11 +132,11 @@ class InputLoader:
                 try:
                     functions.append(FunctionDefinition(**item))
                 except ValidationError as e:
-                    missing = [err["loc"][0] for err in e.errors()]
-                    errors.append(
-                        f"index {i}: missing key(s) "
-                        f"{', '.join(str(k) for k in missing)}"
-                    )
+                    errs = [
+                        f"'{err['loc'][0]}': {err['msg']}"
+                        for err in e.errors()
+                    ]
+                    errors.append(f"index {i}: {', '.join(errs)}")
             if errors:
                 raise ValueError(
                     f"Error: Invalid function definition(s): "
