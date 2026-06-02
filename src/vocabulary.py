@@ -121,7 +121,7 @@ class Vocabulary:
         generated_tokens: List[int],
     ) -> Set[int]:
         """
-        Return token IDs that extend generated_tokens toward a valid sequence.
+        Return token IDs that extend generated_tokens toward a token sequence.
 
         Args:
             token_sequences (List[List[int]]): Allowed complete token

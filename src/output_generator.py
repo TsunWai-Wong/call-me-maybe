@@ -145,6 +145,9 @@ Task: {prompt} <|im_end|>
         prev_state: State = LiteralState(self.model, end_state, "}")
 
         if function_selected:
+            # when the function does not require a parameter
+            if function_selected.parameters is None:
+                return "{}"
             param_count = len(function_selected.parameters)
             for param_name, param_info in reversed(
                 function_selected.parameters.items()

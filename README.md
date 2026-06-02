@@ -274,44 +274,24 @@ Combine all components into a single JSON object:
 
 ## Testing Strategy
 
-### Input Validation Testing
-
-#### Missing/Malformed Files:
+### Input
 - Invalid flag names for the programme → error message with invalid flag name(s)
 - Input files not found → graceful error message
-- Files not readable (permission denied) → graceful error message
+- Input files not readable (permission denied) → graceful error message
 - Invalid JSON syntax → error message with line number
-- Missing required keys → clear error indicating which keys
-- Wrong value types → type validation errors
-- Empty values → validation failure with explanation
+- Missing required keys → error message with index number
+- Wrong value types → validation error message
+- Invalid values (e.g. Null values, empty string, extremely long string, Unsupported parameter types for parameters and returns) → validation error message
 
-#### Edge Cases:
-- Empty string prompt: e.g. `"prompt": ""`
-- Numeric prompt: `"prompt": 123`
-- Null prompt: `"prompt": null`
-- Very long prompt: >1000 characters
-- Special characters: Unicode, emojis, control characters
+### Processing
+- language model cannot be initialised
+- Vocabulary file not found
+- Functions with no parameter require → return empty object (i.e. { })
 
-### Processing Testing
-
-#### Semantic Edge Cases:
-- Prompt doesn't require function calling (ambiguous interpretation)
-- Prompt requires function not in definitions
-- LLM fails to initialize (model not found)
-- Unsupported parameter types
-- Functions with no parameters
-- Functions with many parameters (5+)
-
-### Output Testing
-
-#### File & Format Validation:
-- Output file created successfully
-- Invalid output filename
-- Invalid output directory
-- Output is valid JSON (can be parsed)
-- All required keys present (prompt, name, parameters)
-- No extra keys in output
-- Types match schema definitions
+### Output
+- Invalid output filename → graceful error message
+- Input files not readable (permission denied) → graceful error message
+- Operation System error when outputting → graceful error message
 
 ---
 

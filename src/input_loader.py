@@ -114,7 +114,7 @@ class InputLoader:
             self.prompts = prompts
             return self.prompts
         except FileNotFoundError:
-            raise Exception("Error: Input file is not found")
+            raise Exception("Error: Input prompt file is not found")
 
     def _read_func_definition(self) -> List[FunctionDefinition]:
         """

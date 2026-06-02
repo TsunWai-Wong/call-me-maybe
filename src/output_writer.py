@@ -6,15 +6,6 @@ from pathlib import Path
 class OutputWriter:
     """Validate and persist generated function-call outputs."""
 
-    def validate_parameters(self) -> None:
-        """Validate that generated parameter values match expected types.
-
-        Returns:
-            OutputValidator: Self, for method chaining.
-        """
-        # check whether the data types are correct
-        pass
-
     def write_output(
         self,
         output: Dict[str, object] | List[Dict[str, object]],

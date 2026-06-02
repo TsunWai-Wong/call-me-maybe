@@ -50,7 +50,11 @@ def main() -> None:
         input.load()
         prompts = input.prompts
 
-        model = Small_LLM_Model()
+        try:
+            model = Small_LLM_Model()
+        except Exception:
+            print("Error: language model cannot be initialised")
+            return
 
         results = []
         generator = OutputGenerator(model, input)
