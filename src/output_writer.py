@@ -3,7 +3,7 @@ from typing import List, Dict
 from pathlib import Path
 
 
-class OutputValidator:
+class OutputWriter:
     """Validate and persist generated function-call outputs."""
 
     def validate_parameters(self) -> None:
@@ -31,9 +31,22 @@ class OutputValidator:
         if not isinstance(output, (dict, list)):
             raise TypeError("output must be a dict or a list of dicts")
 
-        output_file = Path(output_path)
-        if not output_file.is_absolute():
-            output_file = Path(__file__).resolve().parent / output_file
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        with output_file.open("w", encoding="utf-8") as file:
-            json.dump(output, file, indent=2, ensure_ascii=False)
+        try:
+            output_file = Path(output_path)
+            if not output_file.is_absolute():
+                output_file = Path(__file__).resolve().parent / output_file
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            with output_file.open("w", encoding="utf-8") as file:
+                json.dump(output, file, indent=2, ensure_ascii=False)
+        except TypeError as e:
+            raise ValueError(
+                f"Invalid output or output_path: {e}"
+            )
+        except PermissionError:
+            raise PermissionError(
+                f"No permission to write '{output_path}'"
+            )
+        except OSError as e:
+            raise OSError(
+                f"Filesystem error while writing '{output_path}': {e}"
+            )

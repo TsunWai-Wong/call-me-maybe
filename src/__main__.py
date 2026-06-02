@@ -1,9 +1,12 @@
 import argparse
+import logging
 from pathlib import Path
 from src.input_loader import InputLoader
 from src.output_generator import OutputGenerator
-from src.output_validator import OutputValidator
+from src.output_writer import OutputWriter
 from llm_sdk import Small_LLM_Model
+
+logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,7 +57,7 @@ def main() -> None:
         for prompt in prompts:
             results.append(generator.generate_output(prompt.content))
 
-        validator = OutputValidator()
+        validator = OutputWriter()
         validator.write_output(results, output_path)
 
     except Exception as e:
