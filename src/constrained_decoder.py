@@ -1,4 +1,4 @@
-from typing import List, Set
+from typing import List, Set, cast
 import numpy as np
 from numpy.typing import NDArray
 from src.state_machine import State, LiteralState, TerminationState
@@ -101,7 +101,7 @@ class ConstrainedDecoder:
                 if next_state:
                     state = next_state
             elif isinstance(state, TerminationState):
-                return self.model.decode(generated_tokens)
+                return cast(str, self.model.decode(generated_tokens))
             else:
                 valid_tokens = state.get_valid_tokens(generated_tokens)
                 prompt_tokens = sys_prompt_tokens + generated_tokens
@@ -114,4 +114,4 @@ class ConstrainedDecoder:
                 else:
                     generated_tokens.append(next_token)
 
-        return self.model.decode(generated_tokens)
+        return cast(str, self.model.decode(generated_tokens))
