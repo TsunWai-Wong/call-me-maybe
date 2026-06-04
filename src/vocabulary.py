@@ -1,4 +1,4 @@
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Self
 import json
 import regex
 from llm_sdk import Small_LLM_Model
@@ -21,7 +21,7 @@ class Vocabulary:
         exact_quote_tokens (set[int]): Token IDs that decode to exactly '"'.
     """
 
-    def __init__(self, model: Small_LLM_Model) -> None:
+    def __init__(self: Self, model: Small_LLM_Model) -> None:
         """
         Initialize Vocabulary and pre-compute token sets.
 
@@ -52,7 +52,7 @@ class Vocabulary:
             elif '\n' not in decoded and '\r' not in decoded:
                 self.string_content_tokens.add(token_id)
 
-    def _get_all_vocabs(self, vocab_path: str) -> Dict[str, int]:
+    def _get_all_vocabs(self: Self, vocab_path: str) -> Dict[str, int]:
         """
         Load the vocabulary JSON file and return it as a dictionary.
 
@@ -73,7 +73,7 @@ class Vocabulary:
             raise Exception("Error: Vocab file cannot be opened"
                             "due to permission error")
 
-    def search_for_vocab(self, targets: List[str]) -> Set[int]:
+    def search_for_vocab(self: Self, targets: List[str]) -> Set[int]:
         """Return token IDs whose vocabulary string is in targets.
 
         Args:
@@ -89,7 +89,7 @@ class Vocabulary:
         return valid_tokens
 
     def get_valid_tokens_number(
-        self,
+        self: Self,
         reg_exp: regex.Pattern[str],
         generated_tokens: List[int],
     ) -> Set[int]:
@@ -116,7 +116,7 @@ class Vocabulary:
         return valid_tokens
 
     def get_valid_tokens_sequences(
-        self,
+        self: Self,
         token_sequences: List[List[int]],
         generated_tokens: List[int],
     ) -> Set[int]:

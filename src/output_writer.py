@@ -1,5 +1,5 @@
 import json
-from typing import List, Dict
+from typing import List, Dict, Self
 from pathlib import Path
 
 
@@ -7,7 +7,7 @@ class OutputWriter:
     """Validate and persist generated function-call outputs."""
 
     def write_output(
-        self,
+        self: Self,
         output: Dict[str, object] | List[Dict[str, object]],
         output_path: str
     ) -> None:

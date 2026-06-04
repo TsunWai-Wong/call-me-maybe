@@ -1,6 +1,6 @@
 import json
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Self
 from src.input_loader import InputLoader
 from llm_sdk import Small_LLM_Model
 from src.constrained_decoder import ConstrainedDecoder
@@ -38,7 +38,9 @@ class OutputGenerator:
         functions (List[Function]): Available function definitions.
     """
 
-    def __init__(self, model: Small_LLM_Model, input: InputLoader) -> None:
+    def __init__(
+        self: Self, model: Small_LLM_Model, input: InputLoader
+    ) -> None:
         """
         Initialize OutputGenerator with a model and loaded input.
 
@@ -50,7 +52,7 @@ class OutputGenerator:
         self.decoder = ConstrainedDecoder(model)
         self.functions = input.functions
 
-    def _generate_name(self, prompt: str) -> str:
+    def _generate_name(self: Self, prompt: str) -> str:
         """
         Generate a valid function name for the given prompt.
         Uses a SelectionState to constrain decoding to known function names.
@@ -95,7 +97,7 @@ Task: {prompt} <|im_end|>
         )
         return self.decoder.generate(state, sys_prompt, 10)
 
-    def _generate_parameters(self, prompt: str, function: str) -> str:
+    def _generate_parameters(self: Self, prompt: str, function: str) -> str:
         """
         Generate a JSON parameter string for the selected function.
 
@@ -180,7 +182,7 @@ Task: {prompt} <|im_end|>
         result = self.decoder.generate(start_state, sys_prompt, 100)
         return result
 
-    def generate_output(self, prompt: str) -> Dict[str, object]:
+    def generate_output(self: Self, prompt: str) -> Dict[str, object]:
         """
         Generate a function-call result dict for a single prompt.
 

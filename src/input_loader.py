@@ -1,5 +1,5 @@
 import json
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Self
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 
@@ -32,7 +32,7 @@ class FunctionDefinition(BaseModel):
     @field_validator("parameters")
     @classmethod
     def validate_parameters(
-        cls, v: Optional[Dict[str, Dict[str, str]]]
+        cls: type["FunctionDefinition"], v: Optional[Dict[str, Dict[str, str]]]
     ) -> Optional[Dict[str, Dict[str, str]]]:
         if v is None:
             return v
@@ -52,7 +52,9 @@ class FunctionDefinition(BaseModel):
 
     @field_validator("returns")
     @classmethod
-    def validate_returns(cls, v: Dict[str, str]) -> Dict[str, str]:
+    def validate_returns(
+        cls: type["FunctionDefinition"], v: Dict[str, str]
+    ) -> Dict[str, str]:
         if set(v.keys()) != {"type"}:
             raise ValueError(
                 "'returns' must contain exactly the key 'type'"
@@ -75,7 +77,7 @@ class InputLoader:
         functions (List[Function]): Loaded function definitions.
     """
 
-    def __init__(self, prompts_path: str, functions_path: str):
+    def __init__(self: Self, prompts_path: str, functions_path: str) -> None:
         """Initialize InputLoader with paths to input files.
 
         Args:
@@ -87,7 +89,7 @@ class InputLoader:
         self.prompts: List[Prompt] = []
         self.functions: List[FunctionDefinition] = []
 
-    def _read_prompts(self) -> List[Prompt]:
+    def _read_prompts(self: Self) -> List[Prompt]:
         """
         Read and validate prompts from the prompts JSON file.
 
@@ -116,7 +118,7 @@ class InputLoader:
         except FileNotFoundError:
             raise Exception("Error: Input prompt file is not found")
 
-    def _read_func_definition(self) -> List[FunctionDefinition]:
+    def _read_func_definition(self: Self) -> List[FunctionDefinition]:
         """
         Read and store function definitions from the functions JSON file.
 
@@ -147,7 +149,7 @@ class InputLoader:
         except FileNotFoundError:
             raise Exception("Error: Functions definition file is not found")
 
-    def load(self) -> None:
+    def load(self: Self) -> None:
         """
         Load prompts and function definitions, raising on file errors.
         """

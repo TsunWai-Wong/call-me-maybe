@@ -1,4 +1,4 @@
-from typing import List, Set, cast
+from typing import List, Set, Self
 import numpy as np
 from numpy.typing import NDArray
 from src.state_machine import State, LiteralState, TerminationState
@@ -13,7 +13,7 @@ class ConstrainedDecoder:
         model: The language model used for logits and decoding.
     """
 
-    def __init__(self, model: Small_LLM_Model) -> None:
+    def __init__(self: Self, model: Small_LLM_Model) -> None:
         """
         Initialize ConstrainedDecoder with a language model.
 
@@ -39,7 +39,7 @@ class ConstrainedDecoder:
         return probs
 
     def _get_next_token(
-        self,
+        self: Self,
         prompt: List[int],
         valid_tokens: Set[int],
     ) -> int:
@@ -72,10 +72,15 @@ class ConstrainedDecoder:
         probs = self._softmax(logits_filtered)
 
         # Sample an index, then map back to the real token ID
-        sampled_index = np.random.choice(len(probs), p=probs)
+        sampled_index = int(np.random.choice(len(probs), p=probs))
         return valid_token_ids[sampled_index]
 
-    def generate(self, state: State, prompt: str, max_tokens: int) -> str:
+    def generate(
+        self: Self,
+        state: State,
+        prompt: str,
+        max_tokens: int,
+    ) -> str:
         """
         Generate a constrained output string driven by a state machine.
 
@@ -101,7 +106,7 @@ class ConstrainedDecoder:
                 if next_state:
                     state = next_state
             elif isinstance(state, TerminationState):
-                return cast(str, self.model.decode(generated_tokens))
+                return self.model.decode(generated_tokens)
             else:
                 valid_tokens = state.get_valid_tokens(generated_tokens)
                 prompt_tokens = sys_prompt_tokens + generated_tokens
@@ -114,4 +119,4 @@ class ConstrainedDecoder:
                 else:
                     generated_tokens.append(next_token)
 
-        return cast(str, self.model.decode(generated_tokens))
+        return self.model.decode(generated_tokens)
