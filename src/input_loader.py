@@ -36,7 +36,9 @@ class FunctionDefinition(BaseModel):
     ) -> Optional[Dict[str, Dict[str, str]]]:
         if v is None:
             return v
-        valid_types = {"string", "number"}
+        valid_types = {
+            "string", "number", "integer", "boolean", "array", "object"
+            }
         for param_name, param_def in v.items():
             if set(param_def.keys()) != {"type"}:
                 raise ValueError(
@@ -46,7 +48,8 @@ class FunctionDefinition(BaseModel):
             if param_def["type"] not in valid_types:
                 raise ValueError(
                     f"parameter '{param_name}' type must be "
-                    f"'string' or 'number'"
+                    "'string', 'number', 'integer', 'boolean', "
+                    "'array', or 'object'"
                 )
         return v
 
@@ -59,9 +62,12 @@ class FunctionDefinition(BaseModel):
             raise ValueError(
                 "'returns' must contain exactly the key 'type'"
             )
-        if v["type"] not in {"string", "number"}:
+        if v["type"] not in {
+            "string", "number", "integer", "boolean", "array", "object"
+        }:
             raise ValueError(
-                "'returns' type must be 'string' or 'number'"
+                "'returns' type must be 'string', 'number', 'integer', "
+                "'boolean', 'array', or 'object'"
             )
         return v
 

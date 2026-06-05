@@ -154,6 +154,8 @@ class StringGenerationState(State):
             LiteralState | None: A closing-quote literal state on close,
                 else None.
         """
+        # allow \"
+        # check for }""
         last_token = generated_tokens[-1]
         if not self.has_open_quote:
             self.has_open_quote = True
@@ -176,7 +178,8 @@ class NumberGenerationState(State):
 
     def __init__(self: Self, model: Small_LLM_Model,
                  next_state: Optional[State],
-                 delimiters: List[str]) -> None:
+                 delimiters: List[str],
+                 mode: str) -> None:
         """
         Initialize NumberGenerationState.
 
@@ -185,6 +188,8 @@ class NumberGenerationState(State):
             next_state (State): State to enter after the number ends.
             delimiters (List[str]): String tokens that terminate the number.
         """
+        if mode == "integer":
+            delimiters.append(".")
         super().__init__(model, next_state)
         self.delimiters = self.vocabs.search_for_vocab(delimiters)
         self.started = False
@@ -205,7 +210,7 @@ class NumberGenerationState(State):
         valid_tokens: Set[int] = set()
         valid_tokens = self.vocabs.get_valid_tokens_number(
             self.vocabs.number_regex,
-            self.generated_tokens,
+            self.generated_tokens
         )
         valid_tokens.update(self.delimiters)
         return valid_tokens

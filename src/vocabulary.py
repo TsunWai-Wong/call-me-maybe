@@ -91,7 +91,7 @@ class Vocabulary:
     def get_valid_tokens_number(
         self: Self,
         reg_exp: regex.Pattern[str],
-        generated_tokens: List[int],
+        generated_tokens: List[int]
     ) -> Set[int]:
         """
         Return number token IDs that extend generated_tokens and match reg_exp.

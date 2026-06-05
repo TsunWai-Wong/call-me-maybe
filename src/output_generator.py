@@ -121,7 +121,8 @@ Task: {prompt} <|im_end|>
         if function_selected is not None and function_selected.parameters:
             params_info = ", ".join(
                 [
-                    f"'{param_name}' ({param_info['type']})"
+                    f"'{param_name}' ({param_info['type'].replace("integer",
+                                                                  "number")})"
                     for param_name, param_info in
                     function_selected.parameters.items()
                 ]
@@ -137,7 +138,7 @@ Task: {prompt} <|im_end|>
             "For string parameters, Put a \" symbol to indicate the end\n"
             "of a string.\n"
             "Preserve the EXACT case from the input.\n"
-            "Example of output: {{\"s\": \"I am a string\"}}"
+            "Example of output: {{\"s\": \"I am a string\", \"n\": 123.0}}\n"
             "<|im_end|>\n"
             f"<|im_start|>user\n{prompt}<|im_end|>\n"
             "<|im_start|>assistant\n"
@@ -159,11 +160,18 @@ Task: {prompt} <|im_end|>
                         self.model,
                         prev_state
                     )
-                elif param_info['type'] == "number":
+                elif param_info['type'] in {"number", "integer"}:
                     prev_state = NumberGenerationState(
                         self.model,
                         prev_state,
                         ["]", "}", " ", "!"],
+                        param_info['type']
+                    )
+                else:
+                    prev_state = LiteralState(
+                        self.model,
+                        prev_state,
+                        "null"
                     )
                 prev_state = LiteralState(
                     self.model,
