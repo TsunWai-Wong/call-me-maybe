@@ -51,21 +51,27 @@ class OutputGenerator:
         self.model = model
         self.decoder = ConstrainedDecoder(model)
         self.functions = input.functions
+        self.no_function_sentinel = "fn_none"
 
     def _generate_name(self: Self, prompt: str) -> str:
         """
         Generate a valid function name for the given prompt.
         Uses a SelectionState to constrain decoding to known function names.
+        Returns NO_FUNCTION_SENTINEL if no function fits the task.
 
         Args:
             prompt (str): The user task description.
 
         Returns:
-            str: The predicted function name.
+            str: The predicted function name, or NO_FUNCTION_SENTINEL.
         """
         functions_list = "\n".join(
             f"Function: {f.name} ({f.description})"
             for f in self.functions
+        )
+        functions_list += (
+            f"\nFunction: {self.no_function_sentinel}"
+            " (No suitable function found for this task)"
         )
         sys_prompt = f"""
 <|im_start|>system
@@ -84,10 +90,13 @@ Available functions and their descriptions:
 Task: {prompt} <|im_end|>
 <|im_start|>assistant
 """
+        sentinel_tokens = self.model.encode(
+            self.no_function_sentinel
+        ).tolist()[0]
         allowed_functions = [
             self.model.encode(f.name).tolist()[0]
             for f in self.functions
-        ]
+        ] + [sentinel_tokens]
         next_state = TerminationState(self.model, None)
         state = SelectionState(
             self.model,
@@ -201,6 +210,8 @@ Task: {prompt} <|im_end|>
             dict: Keys are 'prompt', 'name', and 'parameters'.
         """
         function_name = self._generate_name(prompt)
+        if function_name == self.no_function_sentinel:
+            return {"prompt": prompt, "name": None, "parameters": None}
         function_parameters = self._generate_parameters(prompt, function_name)
         return {
             "prompt": prompt,

@@ -161,8 +161,10 @@ class StringGenerationState(State):
             self.has_open_quote = True
             return None
         last_str = self.model.decode([last_token])
-        if '"' in last_str:
-            return LiteralState(self.model, self.next_state, '"')
+        if '"' in last_str and last_str != '\"':
+            return LiteralState(
+                self.model, self.next_state, f'{last_str.split('"', 1)[0]}"'
+                )
         return None
 
 
@@ -228,7 +230,7 @@ class NumberGenerationState(State):
         self.started = True
         if generated_tokens and generated_tokens[-1] in self.delimiters:
             return self.next_state
-        if len(self.generated_tokens) >= 10:
+        if len(self.generated_tokens) >= 15:
             return self.next_state
         return None
 
