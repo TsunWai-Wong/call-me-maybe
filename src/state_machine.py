@@ -154,8 +154,6 @@ class StringGenerationState(State):
             LiteralState | None: A closing-quote literal state on close,
                 else None.
         """
-        # allow \"
-        # check for }""
         last_token = generated_tokens[-1]
         if not self.has_open_quote:
             self.has_open_quote = True

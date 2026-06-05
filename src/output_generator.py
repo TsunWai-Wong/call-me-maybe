@@ -216,6 +216,9 @@ Task: {prompt} <|im_end|>
         return {
             "prompt": prompt,
             "name": function_name if function_name else None,
-            "parameters": (json.loads(function_parameters)
-                           if function_parameters else None)
+            "parameters": (
+                {k: v.strip() if isinstance(v, str) else v
+                 for k, v in json.loads(function_parameters).items()}
+                if function_parameters else None
+            )
         }
